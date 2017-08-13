@@ -134,6 +134,7 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(controller src/controller.cpp)
+add_executable(test_epos2 src/test_epos2.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -144,10 +145,15 @@ add_executable(controller src/controller.cpp)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(controller epos2_gencpp)
+add_dependencies(test_epos2 epos2_gencpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(controller
   ${catkin_LIBRARIES}
+)
+target_link_libraries(test_epos2
+  ${catkin_LIBRARIES}
+  EposCmd
 )
 
 #############

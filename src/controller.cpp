@@ -1,5 +1,22 @@
 #include "ros/ros.h"
 #include "epos2/Torque.h"
+#include <iostream>
+#include "Definitions.h"
+#include <string.h>
+#include <sstream>
+#include <unistd.h>
+#include <getopt.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <list>
+#include <math.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/times.h>
+#include <sys/time.h>
+
+using namespace std;
 
 bool print_request(epos2::Torque::Request &req, epos2::Torque::Response &res)
 {
