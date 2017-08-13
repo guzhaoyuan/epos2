@@ -1,4 +1,4 @@
-#epos2
+# epos2
 
 maxon DC motor current control, communicate with rospy
 
@@ -6,17 +6,15 @@ maxon DC motor current control, communicate with rospy
 
 Torque.srv
 
-'''
-float64 position(can be none)
-float64 torque
----
-float64 position_new
-float64 reward
-bool done
-float64 velocity(more info)
-'''
+	float64 position(can be none)
+	float64 torque
+	---
+	float64 position_new
+	float64 reward
+	bool done
+	float64 velocity(more info)
 
-##EPOS2 info
+## EPOS2 info
 
 using USB mode, no need to set baudrate
 
@@ -30,7 +28,7 @@ for driver and library, find 'EPOS_Linux_Library' on maxon official site(https:/
 - g_interfaceName = "USB";
 - g_portName = "USB0";
 
-##Framework
+## Framework
 
 node1: request position or torque, calculate on return
 
