@@ -1,0 +1,7 @@
+float64 position
+float64 torque
+---
+float64 position_new
+float64 reward
+bool done
+float64 velocity
