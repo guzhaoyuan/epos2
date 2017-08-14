@@ -240,6 +240,21 @@ int get_velocity(HANDLE p_DeviceHandle, unsigned short p_usNodeId, unsigned int*
 	LogInfo(msg.str());
 }
 
+int get_TargetVelocity(void* g_pKeyHandle, unsigned short g_usNodeId, unsigned int* ulErrorCode)
+{
+	int lResult = MMC_SUCCESS;
+	long pTargetVelocity;
+	stringstream msg;
+	if(VCS_GetTargetVelocity(g_pKeyHandle, g_usNodeId, &pTargetVelocity, ulErrorCode) == 0)
+	{
+		LogError("VCS_GetVelocityIs", lResult, *ulErrorCode);
+		lResult = MMC_FAILED;
+	}
+	msg << "pTargetVelocity," << pTargetVelocity ;
+	LogInfo(msg.str());
+}
+
+
 int moveToPosition(HANDLE p_DeviceHandle, unsigned short p_usNodeId, long TargetPosition, int Absolute, unsigned int* p_pErrorCode)
 {
 	int lResult = MMC_SUCCESS;

@@ -33,3 +33,23 @@ for driver and library, find 'EPOS_Linux_Library' on maxon official site(https:/
 node1: request position or torque, calculate on return
 
 node2: receive request and execute, wait until end of this step, return new state and info, then wait for new request
+
+## Files
+
+### src
+
+controller.cpp: node for controlling torque
+test_epos2.cpp: test for develop
+wrap.cpp: wrap api to make code clean and easy to program
+
+### scripts
+
+request.py: node for requesting service and get info from controller
+
+### include
+
+headings
+
+## Usages
+
+use as a ros package, put the whole epos2 files under workspace/src and compile with catkin

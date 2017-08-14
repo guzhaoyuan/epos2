@@ -22,13 +22,21 @@ int main(int argc, char** argv)
 	// }
 
 	//enable epos
-	SetEnableState(g_pKeyHandle, g_usNodeId, &ulErrorCode);
-	//enable position mode
-	ActivateProfileVelocityMode(g_pKeyHandle, g_usNodeId, &ulErrorCode);
-	//position, absolute, error info
-	// moveToPosition(g_pKeyHandle, g_usNodeId, 5000, 0, &ulErrorCode);
-	MoveWithVelocity(g_pKeyHandle, g_usNodeId, 100, &ulErrorCode);
-	sleep(3);
+	// SetEnableState(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	// //enable position mode
+	// ActivateProfileVelocityMode(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+
+	// MoveWithVelocity(g_pKeyHandle, g_usNodeId, 80, &ulErrorCode);
+	// get_TargetVelocity(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	// sleep(2);
+	// get_velocity(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	
+	// get_velocity(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	
+	// get_velocity(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	
+	// get_velocity(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	// sleep(2);
 
 	//disable epos
 	SetDisableState(g_pKeyHandle, g_usNodeId, &ulErrorCode);
