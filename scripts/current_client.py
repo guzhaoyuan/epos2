@@ -4,13 +4,13 @@ from epos2.srv import *
 import rospy
 import sys
 
-def print_position_n_torque(x, y):
+def print_position_n_torque(position, current):
     # print("wait for Service")
-    rospy.wait_for_service('moveToPosition')
+    rospy.wait_for_service('applyTorque')
     try:
         # print("now request service")
-        moveToPosition = rospy.ServiceProxy('moveToPosition', Torque)
-        res = moveToPosition(x, y)
+        applyTorque = rospy.ServiceProxy('applyTorque', Torque)
+        res = applyTorque(position, current)
         return res
     except rospy.ServiceException, e:
         print "Service call failed: %s"%e
@@ -35,8 +35,8 @@ if __name__ == "__main__":
         step += 1
         rospy.loginfo("request:%s",step)
         if step % 2:
-            res = print_position_n_torque(10, step)
+            res = print_position_n_torque(step, 10)
         else:
-            res = print_position_n_torque(20, step)
-        print res.position_new
+            res = print_position_n_torque(step, 20)
+        print "position_new:", res.position_new, "velocity:", res.velocity, "current:", res.current
         # after getting the responce, calc the next move and call step service again

@@ -58,6 +58,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_service_files(
 	FILES
 	Torque.srv
+  Position.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -135,6 +136,9 @@ message(${catkin_INCLUDE_DIRS})
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(controller src/controller.cpp src/wrap.cpp)
+add_executable(position_server src/position_server.cpp src/wrap.cpp)
+add_executable(current_server src/current_server.cpp src/wrap.cpp)
+
 add_executable(test_epos2 src/test_epos2.cpp src/wrap.cpp)
 add_executable(time_test src/time_test.cpp)
 
@@ -147,10 +151,20 @@ add_executable(time_test src/time_test.cpp)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(controller epos2_gencpp)
+add_dependencies(position_server epos2_gencpp)
+add_dependencies(current_server epos2_gencpp)
 add_dependencies(test_epos2 epos2_gencpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(controller
+  ${catkin_LIBRARIES}
+  EposCmd
+)
+target_link_libraries(position_server
+  ${catkin_LIBRARIES}
+  EposCmd
+)
+target_link_libraries(current_server
   ${catkin_LIBRARIES}
   EposCmd
 )

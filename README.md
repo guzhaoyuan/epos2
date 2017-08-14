@@ -39,13 +39,20 @@ node2: receive request and execute, wait until end of this step, return new stat
 
 ### src
 
-controller.cpp: node for controlling torque
+controller.cpp: node for controlling torque, now backup, not for use
 test_epos2.cpp: test for develop
 wrap.cpp: wrap api to make code clean and easy to program
+time_test.cpp: test time
+
+position_server.cpp: create service to control postion
+current_server.cpp: create service to control current
 
 ### scripts
 
-request.py: node for requesting service and get info from controller
+request.py: node for requesting service and get info from controller, now backup, not for use
+position_client.py: request position control service
+current_client.py: request current control service
+
 
 ### include
 
@@ -55,6 +62,11 @@ headings
 
 use as a ros package, put the whole epos2 files under workspace/src and compile with catkin
 
+	#under ${workspace}
+	catkin_make
+	rosrun epos2 current_server
+	rosrun epos2 current_client.py
+
 ## Benchmark
 
 time taken:
@@ -63,5 +75,8 @@ time taken:
 - write current: **5ms**
 - get current: **5ms**
 - get position: **5ms**
+- get velocity: **5ms**
+
+get all 3 parameter takes about **14ms** on average
 
 - ros send request immediately after get response: **7ms**(from the perspective of server)

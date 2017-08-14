@@ -210,19 +210,18 @@ void SetDefaultParameters()
 	g_baudrate = 1000000; //115200
 }
 
-int get_position(HANDLE p_DeviceHandle, unsigned short p_usNodeId, unsigned int* p_pErrorCode)
+int get_position(HANDLE p_DeviceHandle, unsigned short p_usNodeId, int* pPositionIs, unsigned int* p_pErrorCode)
 {
 	int lResult = MMC_SUCCESS;
-	int pPositionIs;
 	unsigned int pErrorCode;
-	stringstream msg;
-	if(VCS_GetPositionIs(p_DeviceHandle, p_usNodeId, &pPositionIs, &pErrorCode) == 0)
+	// stringstream msg;
+	if(VCS_GetPositionIs(p_DeviceHandle, p_usNodeId, pPositionIs, &pErrorCode) == 0)
 	{
 		LogError("VCS_GetPositionIs", lResult, *p_pErrorCode);
 		lResult = MMC_FAILED;
 	}
-	msg << "pPositionIs," << pPositionIs ;
-	LogInfo(msg.str());
+	// msg << "pPositionIs," << *pPositionIs ;
+	// LogInfo(msg.str());
 }
 int get_PositionProfile(HANDLE p_DeviceHandle, unsigned short p_usNodeId, unsigned int* p_pErrorCode)
 {
@@ -242,18 +241,18 @@ int get_PositionProfile(HANDLE p_DeviceHandle, unsigned short p_usNodeId, unsign
 	LogInfo(msg.str());
 }
 
-int get_velocity(HANDLE p_DeviceHandle, unsigned short p_usNodeId, unsigned int* p_pErrorCode)
+int get_velocity(HANDLE p_DeviceHandle, unsigned short p_usNodeId, int* pVelocityIs, unsigned int* p_pErrorCode)
 {
 	int lResult = MMC_SUCCESS;
-	int pVelocityIs;
-	stringstream msg;
-	if(VCS_GetVelocityIs(p_DeviceHandle, p_usNodeId, &pVelocityIs, p_pErrorCode) == 0)
+	// int pVelocityIs;
+	// stringstream msg;
+	if(VCS_GetVelocityIs(p_DeviceHandle, p_usNodeId, pVelocityIs, p_pErrorCode) == 0)
 	{
 		LogError("VCS_GetVelocityIs", lResult, *p_pErrorCode);
 		lResult = MMC_FAILED;
 	}
-	msg << "pVelocityIs," << pVelocityIs ;
-	LogInfo(msg.str());
+	// msg << "pVelocityIs," << *pVelocityIs ;
+	// LogInfo(msg.str());
 }
 
 int get_TargetVelocity(void* g_pKeyHandle, unsigned short g_usNodeId, unsigned int* ulErrorCode)
@@ -321,7 +320,7 @@ int SetCurrentMust(HANDLE p_DeviceHandle, unsigned short p_usNodeId, short Curre
 		lResult = MMC_FAILED;
 	}
 	msg << "SetCurrentMust:" << CurrentMust;
-	LogInfo(msg.str());
+	// LogInfo(msg.str());
 	return lResult;
 }
 

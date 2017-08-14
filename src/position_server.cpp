@@ -1,13 +1,13 @@
 #include "ros/ros.h"
-#include "epos2/Torque.h"
+#include "epos2/Position.h"
 
 #include "wrap.h"
 
-bool moveToPosition(epos2::Torque::Request &req, epos2::Torque::Response &res)
+bool moveToPosition(epos2::Position::Request &req, epos2::Position::Response &res)
 {
 	unsigned int ulErrorCode = 0;
 	// the force transform of the data type can cause problem
-	ROS_INFO("request: position=%ld, torque=%ld", (long int)req.position, (long int)req.torque);
+	ROS_INFO("request: position=%ld", (long int)req.position);
 	MoveToPosition(g_pKeyHandle, g_usNodeId, (long)req.position, 0, &ulErrorCode);
 
 	short current;
@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 	}
 	
 	SetEnableState(g_pKeyHandle, g_usNodeId, &ulErrorCode);
-	ActivateProfileCurrentMode(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	ActivateProfilePositionMode(g_pKeyHandle, g_usNodeId, &ulErrorCode);
 
 	ros::init(argc, argv, "epos2");
 	ros::NodeHandle n;
