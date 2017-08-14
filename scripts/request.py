@@ -6,12 +6,12 @@ import sys
 
 def print_position_n_torque(x, y):
     print("wait for Service")
-    rospy.wait_for_service('print_request')
+    rospy.wait_for_service('moveToPosition')
     try:
         print("now request service")
-        print_request = rospy.ServiceProxy('print_request', Torque)
+        moveToPosition = rospy.ServiceProxy('moveToPosition', Torque)
         print("now request service")
-        resp1 = print_request(x, y)
+        resp1 = moveToPosition(x, y)
         print(resp1)
     except rospy.ServiceException, e:
         print "Service call failed: %s"%e

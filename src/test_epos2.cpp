@@ -30,13 +30,6 @@ int main(int argc, char** argv)
 	// get_TargetVelocity(g_pKeyHandle, g_usNodeId, &ulErrorCode);
 	// sleep(2);
 	// get_velocity(g_pKeyHandle, g_usNodeId, &ulErrorCode);
-	
-	// get_velocity(g_pKeyHandle, g_usNodeId, &ulErrorCode);
-	
-	// get_velocity(g_pKeyHandle, g_usNodeId, &ulErrorCode);
-	
-	// get_velocity(g_pKeyHandle, g_usNodeId, &ulErrorCode);
-	// sleep(2);
 
 	//disable epos
 	SetDisableState(g_pKeyHandle, g_usNodeId, &ulErrorCode);
