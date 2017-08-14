@@ -270,17 +270,16 @@ int get_TargetVelocity(void* g_pKeyHandle, unsigned short g_usNodeId, unsigned i
 	LogInfo(msg.str());
 }
 
-int get_current(HANDLE p_DeviceHandle, unsigned short p_usNodeId, unsigned int* p_pErrorCode)
+int get_current(HANDLE p_DeviceHandle, unsigned short p_usNodeId, short* pCurrentMust, unsigned int* p_pErrorCode)
 {
 	int lResult = MMC_SUCCESS;
-	short pCurrentMust;
 	stringstream msg;
-	if(VCS_GetCurrentMust(p_DeviceHandle, p_usNodeId, &pCurrentMust, p_pErrorCode) == 0)
+	if(VCS_GetCurrentMust(p_DeviceHandle, p_usNodeId, pCurrentMust, p_pErrorCode) == 0)
 	{
 		LogError("VCS_GetCurrentMust", lResult, *p_pErrorCode);
 		lResult = MMC_FAILED;
 	}
-	msg << "pCurrentMust," << pCurrentMust ;
+	msg << "pCurrentMust," << *pCurrentMust ;
 	LogInfo(msg.str());
 }
 
@@ -293,8 +292,8 @@ int MoveToPosition(HANDLE p_DeviceHandle, unsigned short p_usNodeId, long Target
 		LogError("VCS_MoveToPosition", lResult, *p_pErrorCode);
 		lResult = MMC_FAILED;
 	}
-	msg << "moveToPosition:" << TargetPosition ;
-	LogInfo(msg.str());
+	// msg << "moveToPosition:" << TargetPosition ;
+	// LogInfo(msg.str());
 	return lResult;
 }
 

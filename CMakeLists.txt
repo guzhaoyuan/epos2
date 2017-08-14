@@ -120,7 +120,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   include/epos2
 )
-
+message(${catkin_INCLUDE_DIRS})
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/epos2.cpp
@@ -136,6 +136,7 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(controller src/controller.cpp src/wrap.cpp)
 add_executable(test_epos2 src/test_epos2.cpp src/wrap.cpp)
+add_executable(time_test src/time_test.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -157,7 +158,9 @@ target_link_libraries(test_epos2
   ${catkin_LIBRARIES}
   EposCmd
 )
-
+target_link_libraries(controller
+  ${catkin_LIBRARIES}
+)
 #############
 ## Install ##
 #############

@@ -7,9 +7,16 @@ bool moveToPosition(epos2::Torque::Request &req, epos2::Torque::Response &res)
 {
 	unsigned int ulErrorCode = 0;
 	// the force transform of the data type can cause problem
-	ROS_INFO("request: position=%ld, torque=%ld", (long int)req.position, (long int)req.torque);
-	MoveToPosition(g_pKeyHandle, g_usNodeId, (long)req.position, 0, &ulErrorCode);
-	res.position_new = 1;
+	ROS_INFO("\nrequest: position=%ld, torque=%ld", (long int)req.position, (long int)req.torque);
+	SetCurrentMust(g_pKeyHandle, g_usNodeId, (long)req.position, &ulErrorCode);
+
+	short current;
+	ROS_INFO("now read current");
+	get_current(g_pKeyHandle, g_usNodeId, &current, &ulErrorCode);
+	res.current = current;
+	
+	// sleep(0.01);
+	ROS_INFO("now return");
 	return true;
 }
 
@@ -27,7 +34,7 @@ int main(int argc, char **argv)
 	}
 	
 	SetEnableState(g_pKeyHandle, g_usNodeId, &ulErrorCode);
-	ActivateProfilePositionMode(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	ActivateProfileCurrentMode(g_pKeyHandle, g_usNodeId, &ulErrorCode);
 
 	ros::init(argc, argv, "epos2");
 	ros::NodeHandle n;

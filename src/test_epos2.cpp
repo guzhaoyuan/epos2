@@ -31,7 +31,7 @@ int main(int argc, char** argv)
 	while(1)
 	{
 		sleep(0.1);
-		get_current(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+		get_current(g_pKeyHandle, g_usNodeId, &targetCurrent, &ulErrorCode);
 	}
 	// MoveWithVelocity(g_pKeyHandle, g_usNodeId, 80, &ulErrorCode);
 	// get_TargetVelocity(g_pKeyHandle, g_usNodeId, &ulErrorCode);
