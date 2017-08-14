@@ -176,7 +176,23 @@ int ActivateProfileVelocityMode(HANDLE p_DeviceHandle, unsigned short p_usNodeId
 
 	if(VCS_ActivateProfileVelocityMode(p_DeviceHandle, p_usNodeId, p_rlErrorCode) == 0)
 	{
-		LogError("VCS_ActivateProfilePositionMode", lResult, *p_rlErrorCode);
+		LogError("VCS_ActivateProfileVelocityMode", lResult, *p_rlErrorCode);
+		lResult = MMC_FAILED;
+	}
+	return  lResult;
+}
+
+int ActivateProfileCurrentMode(HANDLE p_DeviceHandle, unsigned short p_usNodeId, unsigned int* p_rlErrorCode)
+{
+	int lResult = MMC_SUCCESS;
+	stringstream msg;
+
+	msg << "set profile current mode, node = " << p_usNodeId;
+	LogInfo(msg.str());
+
+	if(VCS_ActivateCurrentMode(p_DeviceHandle, p_usNodeId, p_rlErrorCode) == 0)
+	{
+		LogError("VCS_ActivateCurrentMode", lResult, *p_rlErrorCode);
 		lResult = MMC_FAILED;
 	}
 	return  lResult;
@@ -254,8 +270,21 @@ int get_TargetVelocity(void* g_pKeyHandle, unsigned short g_usNodeId, unsigned i
 	LogInfo(msg.str());
 }
 
+int get_current(HANDLE p_DeviceHandle, unsigned short p_usNodeId, unsigned int* p_pErrorCode)
+{
+	int lResult = MMC_SUCCESS;
+	short pCurrentMust;
+	stringstream msg;
+	if(VCS_GetCurrentMust(p_DeviceHandle, p_usNodeId, &pCurrentMust, p_pErrorCode) == 0)
+	{
+		LogError("VCS_GetCurrentMust", lResult, *p_pErrorCode);
+		lResult = MMC_FAILED;
+	}
+	msg << "pCurrentMust," << pCurrentMust ;
+	LogInfo(msg.str());
+}
 
-int moveToPosition(HANDLE p_DeviceHandle, unsigned short p_usNodeId, long TargetPosition, int Absolute, unsigned int* p_pErrorCode)
+int MoveToPosition(HANDLE p_DeviceHandle, unsigned short p_usNodeId, long TargetPosition, int Absolute, unsigned int* p_pErrorCode)
 {
 	int lResult = MMC_SUCCESS;
 	stringstream msg;
@@ -279,6 +308,20 @@ int MoveWithVelocity(void* p_DeviceHandle, unsigned short p_usNodeId, long Targe
 		lResult = MMC_FAILED;
 	}
 	msg << "MoveWithVelocity:" << TargetVelocity ;
+	LogInfo(msg.str());
+	return lResult;
+}
+
+int SetCurrentMust(HANDLE p_DeviceHandle, unsigned short p_usNodeId, short CurrentMust, unsigned int* p_pErrorCode)
+{
+	int lResult = MMC_SUCCESS;
+	stringstream msg;
+	if(VCS_SetCurrentMust(p_DeviceHandle, p_usNodeId, CurrentMust, p_pErrorCode) == 0)
+	{
+		LogError("VCS_SetCurrentMust", lResult, *p_pErrorCode);
+		lResult = MMC_FAILED;
+	}
+	msg << "SetCurrentMust:" << CurrentMust;
 	LogInfo(msg.str());
 	return lResult;
 }

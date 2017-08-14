@@ -22,17 +22,24 @@ int main(int argc, char** argv)
 	// }
 
 	//enable epos
-	// SetEnableState(g_pKeyHandle, g_usNodeId, &ulErrorCode);
-	// //enable position mode
-	// ActivateProfileVelocityMode(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	SetEnableState(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	//enable position mode
+	ActivateProfileCurrentMode(g_pKeyHandle, g_usNodeId, &ulErrorCode);
 
+	short targetCurrent = 20;
+	SetCurrentMust(g_pKeyHandle, g_usNodeId, targetCurrent, &ulErrorCode);
+	while(1)
+	{
+		sleep(0.1);
+		get_current(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	}
 	// MoveWithVelocity(g_pKeyHandle, g_usNodeId, 80, &ulErrorCode);
 	// get_TargetVelocity(g_pKeyHandle, g_usNodeId, &ulErrorCode);
 	// sleep(2);
 	// get_velocity(g_pKeyHandle, g_usNodeId, &ulErrorCode);
 
 	//disable epos
-	SetDisableState(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	// SetDisableState(g_pKeyHandle, g_usNodeId, &ulErrorCode);
 	//close device
 	if((lResult = CloseDevice(&ulErrorCode))!=MMC_SUCCESS)
 	{
