@@ -13,6 +13,7 @@ Torque.srv
 	float64 reward
 	bool done
 	float64 velocity(more info)
+	short current
 
 ## EPOS2 info
 
@@ -53,3 +54,14 @@ headings
 ## Usages
 
 use as a ros package, put the whole epos2 files under workspace/src and compile with catkin
+
+## Benchmark
+
+time taken:
+
+- write position: **9ms**
+- write current: **5ms**
+- get current: **5ms**
+- get position: **5ms**
+
+- ros send request immediately after get response: **7ms**(from the perspective of server)
