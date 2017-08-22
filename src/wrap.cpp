@@ -279,7 +279,7 @@ int get_current(HANDLE p_DeviceHandle, unsigned short p_usNodeId, short* pCurren
 		lResult = MMC_FAILED;
 	}
 	msg << "pCurrentMust," << *pCurrentMust ;
-	LogInfo(msg.str());
+	// LogInfo(msg.str());
 }
 
 int MoveToPosition(HANDLE p_DeviceHandle, unsigned short p_usNodeId, long TargetPosition, int Absolute, unsigned int* p_pErrorCode)

@@ -59,6 +59,7 @@ add_service_files(
 	FILES
 	Torque.srv
   Position.srv
+  Velocity.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -137,6 +138,7 @@ message(${catkin_INCLUDE_DIRS})
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(controller src/controller.cpp src/wrap.cpp)
 add_executable(position_server src/position_server.cpp src/wrap.cpp)
+add_executable(velocity_server src/velocity_server.cpp src/wrap.cpp)
 add_executable(current_server src/current_server.cpp src/wrap.cpp)
 
 add_executable(test_epos2 src/test_epos2.cpp src/wrap.cpp)
@@ -152,6 +154,7 @@ add_executable(time_test src/time_test.cpp)
 ## same as for the library above
 add_dependencies(controller epos2_gencpp)
 add_dependencies(position_server epos2_gencpp)
+add_dependencies(velocity_server epos2_gencpp)
 add_dependencies(current_server epos2_gencpp)
 add_dependencies(test_epos2 epos2_gencpp)
 
@@ -161,6 +164,10 @@ target_link_libraries(controller
   EposCmd
 )
 target_link_libraries(position_server
+  ${catkin_LIBRARIES}
+  EposCmd
+)
+target_link_libraries(velocity_server
   ${catkin_LIBRARIES}
   EposCmd
 )
