@@ -7,7 +7,7 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 {
 	unsigned int ulErrorCode = 0;
 	// the force transform of the data type can cause problem
-	ROS_INFO("request: position=%ld, torque=%ld", (long int)req.position, (long int)req.torque);
+	ROS_INFO("request: torque=%ld", (long int)req.torque);
 	SetCurrentMust(g_pKeyHandle, g_usNodeId, req.torque, &ulErrorCode);
 
 	short current;

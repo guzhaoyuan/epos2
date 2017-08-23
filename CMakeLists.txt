@@ -142,6 +142,7 @@ add_executable(velocity_server src/velocity_server.cpp src/wrap.cpp)
 add_executable(current_server src/current_server.cpp src/wrap.cpp)
 
 add_executable(test_epos2 src/test_epos2.cpp src/wrap.cpp)
+add_executable(test_math src/test_math.cpp)
 add_executable(time_test src/time_test.cpp)
 
 ## Rename C++ executable without prefix
@@ -179,7 +180,10 @@ target_link_libraries(test_epos2
   ${catkin_LIBRARIES}
   EposCmd
 )
-target_link_libraries(controller
+target_link_libraries(time_test
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(test_math
   ${catkin_LIBRARIES}
 )
 #############
