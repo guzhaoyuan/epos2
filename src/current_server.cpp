@@ -1,9 +1,18 @@
+/**
+    current_server.cpp
+    Purpose: 	communicate using service Current.srv
+				provide current control, use with current_client.py
+				rosrun epos2 current_lient.py
+
+    @author Zhaoyuan Gu
+    @version 0.1 08/23/17 
+*/
 #include "ros/ros.h"
-#include "epos2/Torque.h"
+#include "epos2/Current.h"
 
 #include "wrap.h"
 
-bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
+bool applyTorque(epos2::Current::Request &req, epos2::Current::Response &res)
 {
 	unsigned int ulErrorCode = 0;
 	// the force transform of the data type can cause problem

@@ -1,5 +1,6 @@
 float64 position # not used
 int16 torque
+int16 init # if true, the controller random init a state
 ---
 float64 position_new #-pi to pi
 float64 reward #not used

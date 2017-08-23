@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 
+'''
+    request.py
+    Purpose: used for test service on ros
+
+    @author Zhaoyuan Gu
+    @version 0.1 08/23/17 
+'''
 from epos2.srv import *
 import rospy
 import sys

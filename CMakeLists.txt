@@ -60,6 +60,7 @@ add_service_files(
 	Torque.srv
   Position.srv
   Velocity.srv
+  Current.srv
 )
 
 ## Generate actions in the 'action' folder
