@@ -6,14 +6,15 @@ maxon DC motor current control, communicate with rospy
 
 Torque.srv
 
-	float64 position(can be none)
+	float64 position # used as step counter
 	float64 torque
+	int16 init # if true, the controller init state by offset position to zero, TODO
 	---
-	float64 position_new
-	float64 reward
-	bool done
-	float64 velocity(more info)
-	short current
+	float64 position_new #-pi to pi
+	float64 reward # calc using position, velocity and action 
+	bool done # not used
+	float64 velocity # calc by differentiate position
+	float64 current # not used
 
 ## EPOS2 info
 
@@ -39,20 +40,25 @@ node2: receive request and execute, wait until end of this step, return new stat
 
 ### src
 
-controller.cpp: node for controlling torque, now backup, not for use
+controller.cpp: node for controlling torque, also work as env
+
 test_epos2.cpp: test for develop
 wrap.cpp: wrap api to make code clean and easy to program
 time_test.cpp: test time
 
 position_server.cpp: create service to control postion
 current_server.cpp: create service to control current
+velocity_server.cpp: create service to control velocity
 
 ### scripts
 
+agent,py: request torque, also works as rl agent
+
 request.py: node for requesting service and get info from controller, now backup, not for use
+
 position_client.py: request position control service
 current_client.py: request current control service
-
+velocity_client.py: request velocity control service
 
 ### include
 
@@ -76,7 +82,11 @@ time taken:
 - get current: **5ms**
 - get position: **5ms**
 - get velocity: **5ms**
+- ros send request immediately after get response: **7ms**(from the perspective of server)
+- rl get action: **xms**
 
 get all 3 parameter takes about **14ms** on average
 
-- ros send request immediately after get response: **7ms**(from the perspective of server)
+now strategy: get position 5ms, calculate velocity based on position, get request & return reward 7ms, rl get action xms
+
+controlling cycle: 25ms, 40Hz

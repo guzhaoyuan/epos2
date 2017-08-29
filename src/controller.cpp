@@ -6,6 +6,7 @@
     @version 0.1 08/23/17 
 */
 #include "ros/ros.h"
+#include <signal.h>
 #include "epos2/Torque.h" // service file
 
 #include "wrap.h" // the head of epos control functions
@@ -15,9 +16,9 @@
 #define PI 3.14159
 #define V_LOW -8.0f
 #define V_HIGH 8.0f
-#define CURRENT_MAX 2
-#define CURRENT_MIN -2 // res.torque = (-1,1)
-#define TORQUE_AMP 1000 //torque applied = TORQUE_AMP * res.torque
+#define CURRENT_MAX 2.0f
+#define CURRENT_MIN -2.0f // res.torque = (-1,1)
+#define TORQUE_AMP 100 //torque applied = TORQUE_AMP * res.torque
 
 /**
 	define clockwise is minus, conterclockwise is positive
@@ -38,12 +39,13 @@ ros::Duration interval(0,25000000); // 0s,25ms
 ros::Time next;
 
 int position_old, position_new; // for calc velocity
-float angle_old, angle_new, pVelocityIs, pVelocityIs_old, reward;
-short current, torque;
+float angle_old, angle_new, pVelocityIs, pVelocityIs_old, reward, torque;
+short current;
 
 int random_init(){
 	cout<<"init success, return first state"<<endl;
 	// need to update angle while random init
+	//when move back to zero position, record position and set position offset
 }
 
 bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
@@ -68,7 +70,7 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 		if(angle_new > PI)	angle_new-=2*PI; // angle range (-PI , PI]
 	    //calc reward
 	    torque = req.torque;
-	    torque = min(CURRENT_MAX,max(CURRENT_MIN, (int)torque)); // soft limit torque
+	    torque = min(CURRENT_MAX,max(CURRENT_MIN, torque)); // soft limit torque
 		reward = -(angle_old*angle_old + 0.1*pVelocityIs_old*pVelocityIs_old + 0.001*torque*torque);
 		// cout<<angle_new<<",\t"<<pVelocityIs<<",\t"<<reward<<endl;
 
@@ -89,7 +91,8 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 		}
 		(next - ros::Time::now()).sleep();
 
-		ROS_INFO("now write: position=%ld, torque=%ld", (long int)req.position, (long int)req.torque);
+		// use position as step
+		ROS_INFO("now write: step=%ld, torque=%f", (long int)req.position, TORQUE_AMP*torque);
 		SetCurrentMust(g_pKeyHandle, g_usNodeId, TORQUE_AMP*torque, &ulErrorCode);
 
 		// ROS_INFO("now return");
@@ -97,6 +100,14 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 	return true;
 }
 
+void mySigintHandler(int sig)
+{
+  // Do some custom action.
+  // For example, publish a stop message to some other nodes.
+  ROS_INFO("shutdown.");
+  // All the default sigint handler does is call shutdown()
+  ros::shutdown();
+}
 
 
 int main(int argc, char **argv)
@@ -121,6 +132,8 @@ int main(int argc, char **argv)
 	ActivateProfileCurrentMode(g_pKeyHandle, g_usNodeId, &ulErrorCode);
 
 	ros::ServiceServer service = n.advertiseService("applyTorque", applyTorque);
+
+	signal(SIGINT, mySigintHandler);
 
 	ROS_INFO("Ready to move.");
 	ros::spin();
