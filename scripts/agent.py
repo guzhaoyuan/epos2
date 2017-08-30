@@ -11,9 +11,9 @@ ENTROPY_BETA = 0.01
 LR_A = 0.0001    # learning rate for actor
 LR_C = 0.001    # learning rate for critic
 GLOBAL_NET_SCOPE = 'Global_Net'
-MAX_GLOBAL_EP = 1
+MAX_GLOBAL_EP = 2
 UPDATE_GLOBAL_ITER = 10
-
+GLOBAL_RUNNING_R = []
 
 def request_torque(position, current, init=0):
     # print("wait for Service")
@@ -148,9 +148,10 @@ if __name__ == "__main__":
         res = request_torque(0, torque)
         print("position_new:", res.position_new, "\tvelocity:", res.velocity, "\treward:", res.reward)#, "current:", res.current, 
     else:
-        buffer_s, buffer_a, buffer_r = [], [], []
-        for i in range(1):
+        for i in range(MAX_GLOBAL_EP):
+            buffer_s, buffer_a, buffer_r = [], [], []
             step = 0
+            ep_r = 0
             s = request_init()
             while(True):
                 # init the state by call env.reset(), getting the init state from the service
@@ -169,7 +170,8 @@ if __name__ == "__main__":
                 # print "position_new:", res.position_new, "velocity:", res.velocity, "reward:", res.reward#, "current:", res.current, 
                 print("state_new:", s_)
                 s = s_
-                
+                ep_r += res.reward
+
                 if step % UPDATE_GLOBAL_ITER == 0 or res.done:   # update global and assign to local net
                     if res.done:
                         v_s_ = 0   # terminal
@@ -193,7 +195,8 @@ if __name__ == "__main__":
 
                 if res.done:
                     res = request_torque(step, 0)
-                    print("done episode")
+                    GLOBAL_RUNNING_R.append(ep_r)
+                    print("done episode, reward:", ep_r)
                     break
                 # rospy.loginfo("position_new:%s, velocity:%s, current:%s", res.position_new, res.velocity, res.current)
                 # after getting the responce, calc the next move and call step service again

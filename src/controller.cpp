@@ -18,7 +18,7 @@
 #define V_HIGH 20.0f
 #define CURRENT_MAX 2.0f
 #define CURRENT_MIN -2.0f // res.torque = (-1,1)
-#define TORQUE_AMP 50 //torque applied = TORQUE_AMP * res.torque
+#define TORQUE_AMP 80 //torque applied = TORQUE_AMP * res.torque
 #define MAX_STEP 200
 /**
 	define clockwise is minus, conterclockwise is positive
@@ -60,10 +60,30 @@ int random_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 	return true;
 }
 
+int zero_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
+	// need to update angle while random init
+	// wait until position do not change
+	int position_tmp = 1;
+	unsigned int ulErrorCode = 0;
+
+	ActivateProfilePositionMode(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	MoveToPosition(g_pKeyHandle, g_usNodeId, 0, 1, &ulErrorCode);
+	while(position_tmp != 0 && ros::ok()){
+		get_position(g_pKeyHandle, g_usNodeId, &position_tmp, &ulErrorCode);
+		ros::Duration(0.5).sleep();// sleep for 0.5s then compare position again
+	}
+	ActivateProfileCurrentMode(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	// when move back to zero position, record position and set position offset
+	float angle = PI;
+	res.state_new[0] = cos(angle);res.state_new[1] = sin(angle);res.state_new[2] = 0;
+	cout<<"init success, return first state"<<endl;
+	return true;
+}
+
 bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 {
 	if(req.init == 1){
-		random_init(req, res);
+		zero_init(req, res);
 		return true;
 	}else{
 		unsigned int ulErrorCode = 0;
