@@ -14,8 +14,8 @@
 #define position_offset 1000 
 #define pulse_per_round 2000
 #define PI 3.14159
-#define V_LOW -8.0f
-#define V_HIGH 8.0f
+#define V_LOW -20.0f
+#define V_HIGH 20.0f
 #define CURRENT_MAX 2.0f
 #define CURRENT_MIN -2.0f // res.torque = (-1,1)
 #define TORQUE_AMP 100 //torque applied = TORQUE_AMP * res.torque
@@ -42,16 +42,19 @@ int position_old, position_new; // for calc velocity
 float angle_old, angle_new, pVelocityIs, pVelocityIs_old, reward, torque;
 short current;
 
-int random_init(){
+int random_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 	cout<<"init success, return first state"<<endl;
+	res.position_new = PI;
+	res.velocity = 0;
 	// need to update angle while random init
 	//when move back to zero position, record position and set position offset
+	return true;
 }
 
 bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 {
 	if(req.init == 1){
-		random_init();
+		random_init(req, res);
 		return true;
 	}else{
 		unsigned int ulErrorCode = 0;
@@ -64,7 +67,7 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 		
 		//calc velocity before angle, using continuous position n angle, rad/s
 		pVelocityIs = (float)(position_new - position_old)/pulse_per_round*2*PI/interval.toSec();
-		pVelocityIs = min(V_HIGH,max(V_LOW,pVelocityIs)); // soft limit speed
+		// pVelocityIs = min(V_HIGH,max(V_LOW,pVelocityIs)); // soft limit speed
 		//calc angle
 		angle_new = (float)((position_new+position_offset) % pulse_per_round)/pulse_per_round*2*PI;
 		if(angle_new > PI)	angle_new-=2*PI; // angle range (-PI , PI]
@@ -78,7 +81,9 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 		res.position_new = position_new;
 		res.velocity = pVelocityIs;
 		res.reward = reward;
+		res.state_new[0] = cos(angle_new);
 
+		if(req.position >= 200) res.done = true;
 		//update stored position and angle
 		position_old = position_new;
 		angle_old = angle_new;
@@ -104,7 +109,7 @@ void mySigintHandler(int sig)
 {
   // Do some custom action.
   // For example, publish a stop message to some other nodes.
-  ROS_INFO("shutdown.");
+  ROS_INFO("server shutdown.");
   // All the default sigint handler does is call shutdown()
   ros::shutdown();
 }
