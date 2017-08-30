@@ -78,10 +78,10 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 		// cout<<angle_new<<",\t"<<pVelocityIs<<",\t"<<reward<<endl;
 
 		// res.current = current;
-		res.position_new = position_new;
-		res.velocity = pVelocityIs;
+		// res.position_new = position_new;
+		// res.velocity = pVelocityIs;
 		res.reward = reward;
-		res.state_new[0] = cos(angle_new);
+		res.state_new[0] = cos(angle_new);res.state_new[1] = sin(angle_new);res.state_new[2] = pVelocityIs;
 
 		if(req.position >= 200) res.done = true;
 		//update stored position and angle

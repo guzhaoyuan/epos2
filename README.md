@@ -8,12 +8,13 @@ Torque.srv
 
 	float64 position # used as step counter
 	float64 torque
-	int16 init # if true, the controller init state by offset position to zero, TODO
+	int16 init # if true, the controller random init a state
 	---
-	float64 position_new #-pi to pi
-	float64 reward # calc using position, velocity and action 
-	bool done # not used
-	float64 velocity # calc by differentiate position
+	float64[3] state_new # cos() sin() velocity
+	float64 reward #used
+	bool done # used
+	float64 velocity # not used, calc by differenciate position
+	float64 position_new #-pi to pi, now not used
 	float64 current # not used
 
 ## EPOS2 info
