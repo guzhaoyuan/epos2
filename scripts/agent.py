@@ -5,13 +5,14 @@ import rospy
 import sys
 import numpy as np
 import tensorflow as tf
+import pickle
 
 GAMMA = 0.9
 ENTROPY_BETA = 0.01
 LR_A = 0.0001    # learning rate for actor
 LR_C = 0.001    # learning rate for critic
 GLOBAL_NET_SCOPE = 'Global_Net'
-MAX_GLOBAL_EP = 2
+MAX_GLOBAL_EP = 1
 UPDATE_GLOBAL_ITER = 10
 GLOBAL_RUNNING_R = []
 
@@ -150,6 +151,7 @@ if __name__ == "__main__":
     else:
         for i in range(MAX_GLOBAL_EP):
             buffer_s, buffer_a, buffer_r = [], [], []
+            f=open('dataset', 'wb')
             step = 0
             ep_r = 0
             s = request_init()
@@ -184,6 +186,10 @@ if __name__ == "__main__":
                     buffer_v_target.reverse()
 
                     buffer_s, buffer_a, buffer_v_target = np.vstack(buffer_s), np.vstack(buffer_a), np.vstack(buffer_v_target)
+                    dictionary = {'s': buffer_s, 'a': buffer_a, 'v_target': buffer_v_target, 'done':res.done}
+                    
+                    pickle.dump(dictionary, f)
+                    
                     feed_dict = {
                         LOCAL_AC.s: buffer_s,
                         LOCAL_AC.a_his: buffer_a,
@@ -198,5 +204,7 @@ if __name__ == "__main__":
                     GLOBAL_RUNNING_R.append(ep_r)
                     print("done episode, reward:", ep_r)
                     break
+            
+            f.close()
                 # rospy.loginfo("position_new:%s, velocity:%s, current:%s", res.position_new, res.velocity, res.current)
                 # after getting the responce, calc the next move and call step service again
