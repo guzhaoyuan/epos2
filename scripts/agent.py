@@ -31,6 +31,10 @@ def request_init():
 def usage():
     return "%s [position torque]"%sys.argv[0]
 
+def myhook():
+    request_torque(0, 0, init=0) # set step to zero, torque to zero
+    print "shutdown time!"
+
 class Env(object):
     def __init__(self, env_name):
         self.name = env_name
@@ -42,28 +46,32 @@ class Env(object):
 
 
 if __name__ == "__main__":
+    rospy.on_shutdown(myhook)
+
     if len(sys.argv) == 2:
         torque = float(sys.argv[1])
         # print(type(torque))
         res = request_torque(0, torque)
         print "position_new:", res.position_new, "\tvelocity:", res.velocity, "\treward:", res.reward#, "current:", res.current, 
     else:
-        step = 0
-        env = Env('Pendulum')
-        while(True):
-            # init the state by call env.reset(), getting the init state from the service
-            # calculate the next move
-            # call step service
-            step += 1
+        for i in range(3):
+            request_init()
+            step = 0
+            env = Env('Pendulum')
+            while(True):
+                # init the state by call env.reset(), getting the init state from the service
+                # calculate the next move
+                # call step service
+                step += 1
 
-            res = request_torque(step, env.random_action()[0]*2-1)
-            # res = request_torque(step, 0)
-            # print "position_new:", res.position_new, "velocity:", res.velocity, "reward:", res.reward#, "current:", res.current, 
-            print "state_new:", res.state_new
+                res = request_torque(step, env.random_action()[0]*4-2)
+                # res = request_torque(step, 0)
+                # print "position_new:", res.position_new, "velocity:", res.velocity, "reward:", res.reward#, "current:", res.current, 
+                print "state_new:", res.state_new
 
-            if res.done:
-                res = request_torque(step, 0)
-                print("done episode")
-                break
-            # rospy.loginfo("position_new:%s, velocity:%s, current:%s", res.position_new, res.velocity, res.current)
-            # after getting the responce, calc the next move and call step service again
+                if res.done:
+                    res = request_torque(step, 0)
+                    print("done episode")
+                    break
+                # rospy.loginfo("position_new:%s, velocity:%s, current:%s", res.position_new, res.velocity, res.current)
+                # after getting the responce, calc the next move and call step service again

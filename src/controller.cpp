@@ -19,7 +19,7 @@
 #define CURRENT_MAX 2.0f
 #define CURRENT_MIN -2.0f // res.torque = (-1,1)
 #define TORQUE_AMP 100 //torque applied = TORQUE_AMP * res.torque
-
+#define MAX_STEP 200
 /**
 	define clockwise is minus, conterclockwise is positive
 	define theta is the angle from upward axis to pumdulum, range (-PI , PI]
@@ -43,11 +43,20 @@ float angle_old, angle_new, pVelocityIs, pVelocityIs_old, reward, torque;
 short current;
 
 int random_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
-	cout<<"init success, return first state"<<endl;
+	// need to update angle while random init
+	// wait until position do not change
+	int delta = 1, position_tmp, position_tmp_old = 0;
+	unsigned int ulErrorCode = 0;
+	while(delta != 0 && ros::ok()){
+		get_position(g_pKeyHandle, g_usNodeId, &position_tmp, &ulErrorCode);
+		delta = position_tmp - position_tmp_old;
+		position_tmp_old = position_tmp;
+		ros::Duration(0.1).sleep();// sleep for 0.1s then compare position again
+	}
+	// when move back to zero position, record position and set position offset
 	res.position_new = PI;
 	res.velocity = 0;
-	// need to update angle while random init
-	//when move back to zero position, record position and set position offset
+	cout<<"init success, return first state"<<endl;
 	return true;
 }
 
@@ -62,6 +71,7 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 
 		// ROS_INFO("now read position n current");
 		get_position(g_pKeyHandle, g_usNodeId, &position_new, &ulErrorCode);
+
 		// get_current(g_pKeyHandle, g_usNodeId, &current, &ulErrorCode);
 		// get_velocity(g_pKeyHandle, g_usNodeId, &pVelocityIs, &ulErrorCode);
 		
@@ -83,7 +93,7 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 		res.reward = reward;
 		res.state_new[0] = cos(angle_new);res.state_new[1] = sin(angle_new);res.state_new[2] = pVelocityIs;
 
-		if(req.position >= 200) res.done = true;
+		if(req.position >= MAX_STEP) res.done = true;
 		//update stored position and angle
 		position_old = position_new;
 		angle_old = angle_new;
