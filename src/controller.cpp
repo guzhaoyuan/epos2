@@ -18,7 +18,7 @@
 #define V_HIGH 20.0f
 #define CURRENT_MAX 2.0f
 #define CURRENT_MIN -2.0f // res.torque = (-1,1)
-#define TORQUE_AMP 100 //torque applied = TORQUE_AMP * res.torque
+#define TORQUE_AMP 50 //torque applied = TORQUE_AMP * res.torque
 #define MAX_STEP 200
 /**
 	define clockwise is minus, conterclockwise is positive
@@ -35,7 +35,7 @@
 
 ros::Time begin;
 // ros::Duration interval(1.0); // 1s
-ros::Duration interval(0,25000000); // 0s,25ms
+ros::Duration interval(0,30000000); // 0s,30ms
 ros::Time next;
 
 int position_old, position_new; // for calc velocity
@@ -54,8 +54,8 @@ int random_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 		ros::Duration(0.1).sleep();// sleep for 0.1s then compare position again
 	}
 	// when move back to zero position, record position and set position offset
-	res.position_new = PI;
-	res.velocity = 0;
+	float angle = PI;
+	res.state_new[0] = cos(angle);res.state_new[1] = sin(angle);res.state_new[2] = 0;
 	cout<<"init success, return first state"<<endl;
 	return true;
 }
@@ -69,7 +69,7 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 		unsigned int ulErrorCode = 0;
 
 
-		// ROS_INFO("now read position n current");
+		ROS_INFO("now read position n current");
 		get_position(g_pKeyHandle, g_usNodeId, &position_new, &ulErrorCode);
 
 		// get_current(g_pKeyHandle, g_usNodeId, &current, &ulErrorCode);
@@ -110,7 +110,7 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 		ROS_INFO("now write: step=%ld, torque=%f", (long int)req.position, TORQUE_AMP*torque);
 		SetCurrentMust(g_pKeyHandle, g_usNodeId, TORQUE_AMP*torque, &ulErrorCode);
 
-		// ROS_INFO("now return");
+		ROS_INFO("now return");
 	}
 	return true;
 }

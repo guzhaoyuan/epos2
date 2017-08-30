@@ -84,10 +84,14 @@ time taken:
 - get position: **5ms**
 - get velocity: **5ms**
 - ros send request immediately after get response: **7ms**(from the perspective of server)
-- rl get action: **xms**
+- rl get action: **<=3ms**
+- rl update & pull: **<=4ms**
 
-get all 3 parameter takes about **14ms** on average
+- get all 3 parameter takes about **14ms** on average
 
-now strategy: get position 5ms, calculate velocity based on position, get request & return reward 7ms, rl get action xms
+- rosservice + choose_action + update <= 14ms
 
-controlling cycle: 25ms, 40Hz
+now strategy: 	get position 5ms, calculate velocity based on position, get request & return reward 7ms, 
+				rl get action <=3ms, rl update & pull <=4ms
+
+controlling cycle: 30ms, 33.3Hz

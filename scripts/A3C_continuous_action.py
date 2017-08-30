@@ -1,59 +1,45 @@
-#!/usr/bin/env python
+"""
+Asynchronous Advantage Actor Critic (A3C) with continuous action space, Reinforcement Learning.
 
-from epos2.srv import *
-import rospy
-import sys
-import numpy as np
+The Pendulum example.
+
+View more on my tutorial page: https://morvanzhou.github.io/tutorials/
+
+Using:
+tensorflow r1.3
+gym 0.8.0
+"""
+
+import multiprocessing
+import threading
 import tensorflow as tf
+import numpy as np
+import gym
+import os
+import shutil
+import matplotlib.pyplot as plt
 
+GAME = 'Pendulum-v0'
+OUTPUT_GRAPH = True
+LOG_DIR = './log'
+N_WORKERS = multiprocessing.cpu_count()
+MAX_EP_STEP = 200
+MAX_GLOBAL_EP = 2000
+GLOBAL_NET_SCOPE = 'Global_Net'
+UPDATE_GLOBAL_ITER = 10
 GAMMA = 0.9
 ENTROPY_BETA = 0.01
 LR_A = 0.0001    # learning rate for actor
 LR_C = 0.001    # learning rate for critic
-GLOBAL_NET_SCOPE = 'Global_Net'
-MAX_GLOBAL_EP = 1
-UPDATE_GLOBAL_ITER = 10
+GLOBAL_RUNNING_R = []
+GLOBAL_EP = 0
 
+env = gym.make(GAME)
 
-def request_torque(position, current, init=0):
-    # print("wait for Service")
-    #asset current in range(-2,2)
-    rospy.wait_for_service('applyTorque')
-    try:
-        # print("now request service")
-        applyTorque = rospy.ServiceProxy('applyTorque', Torque)
-        # print("request service: ", current)
-        res = applyTorque(position, current, init)
-        return res
-    except rospy.ServiceException as e:
-        print("Service call failed: %s"%e)
+N_S = env.observation_space.shape[0]
+N_A = env.action_space.shape[0]
+A_BOUND = [env.action_space.low, env.action_space.high]
 
-def request_init():
-    # print("wait for Service")
-    rospy.wait_for_service('applyTorque')
-    try:
-        # print("now request service")
-        applyTorque = rospy.ServiceProxy('applyTorque', Torque)
-        res = applyTorque(0, 0, 1)
-        return np.array(res.state_new)
-    except rospy.ServiceException as e:
-        print("Service call failed: %s"%e)
-
-def usage():
-    return "%s [position torque]"%sys.argv[0]
-
-def myhook():
-    request_torque(0, 0, init=0) # set step to zero, torque to zero
-    print("shutdown time!")
-
-class Env(object):
-    def __init__(self, env_name):
-        self.name = env_name
-        self.action_space = 1
-        self.observation_space = 3
-
-    def random_action(self):
-        return np.random.rand(self.action_space)
 
 class ACNet(object):
     def __init__(self, scope, globalAC=None):
@@ -124,57 +110,36 @@ class ACNet(object):
         return SESS.run(self.A, {self.s: s})[0]
 
 
-if __name__ == "__main__":
-    rospy.on_shutdown(myhook)
+class Worker(object):
+    def __init__(self, name, globalAC):
+        self.env = gym.make(GAME).unwrapped
+        self.name = name
+        self.AC = ACNet(name, globalAC)
 
-    SESS = tf.Session()
-
-    env = Env('Pendulum')
-    N_S = env.observation_space
-    N_A = env.action_space
-    A_BOUND = [-2., 2.]
-
-    with tf.device("/cpu:0"):
-        OPT_A = tf.train.RMSPropOptimizer(LR_A, name='RMSPropA')
-        OPT_C = tf.train.RMSPropOptimizer(LR_C, name='RMSPropC')
-        GLOBAL_AC = ACNet(GLOBAL_NET_SCOPE)
-        LOCAL_AC = ACNet('W_0', GLOBAL_AC)  # we only need its params
-
-    SESS.run(tf.global_variables_initializer())
-
-    if len(sys.argv) == 2:
-        torque = float(sys.argv[1])
-        # print(type(torque))
-        res = request_torque(0, torque)
-        print("position_new:", res.position_new, "\tvelocity:", res.velocity, "\treward:", res.reward)#, "current:", res.current, 
-    else:
+    def work(self):
+        global GLOBAL_RUNNING_R, GLOBAL_EP
+        total_step = 1
         buffer_s, buffer_a, buffer_r = [], [], []
-        for i in range(1):
-            step = 0
-            s = request_init()
-            while(True):
-                # init the state by call env.reset(), getting the init state from the service
-                # calculate the next move
-                # call step service
-                step += 1
+        while not COORD.should_stop() and GLOBAL_EP < MAX_GLOBAL_EP:
+            s = self.env.reset()
+            ep_r = 0
+            for ep_t in range(MAX_EP_STEP):
+                if self.name == 'W_0':
+                    self.env.render()
+                a = self.AC.choose_action(s)
+                s_, r, done, info = self.env.step(a)
+                done = True if ep_t == MAX_EP_STEP - 1 else False
 
-                a = LOCAL_AC.choose_action(s)
-                res = request_torque(step, a)
-                # res = request_torque(step, env.random_action()[0]*4-2)
-                # res = request_torque(step, 0)
-                s_ = np.array(res.state_new)
+                ep_r += r
                 buffer_s.append(s)
                 buffer_a.append(a)
-                buffer_r.append((res.reward+8)/8)    # normalize
-                # print "position_new:", res.position_new, "velocity:", res.velocity, "reward:", res.reward#, "current:", res.current, 
-                print("state_new:", s_)
-                s = s_
-                
-                if step % UPDATE_GLOBAL_ITER == 0 or res.done:   # update global and assign to local net
-                    if res.done:
+                buffer_r.append((r+8)/8)    # normalize
+
+                if total_step % UPDATE_GLOBAL_ITER == 0 or done:   # update global and assign to local net
+                    if done:
                         v_s_ = 0   # terminal
                     else:
-                        v_s_ = SESS.run(LOCAL_AC.v, {LOCAL_AC.s: s_[np.newaxis, :]})[0, 0]
+                        v_s_ = SESS.run(self.AC.v, {self.AC.s: s_[np.newaxis, :]})[0, 0]
                     buffer_v_target = []
                     for r in buffer_r[::-1]:    # reverse buffer r
                         v_s_ = r + GAMMA * v_s_
@@ -183,17 +148,60 @@ if __name__ == "__main__":
 
                     buffer_s, buffer_a, buffer_v_target = np.vstack(buffer_s), np.vstack(buffer_a), np.vstack(buffer_v_target)
                     feed_dict = {
-                        LOCAL_AC.s: buffer_s,
-                        LOCAL_AC.a_his: buffer_a,
-                        LOCAL_AC.v_target: buffer_v_target,
+                        self.AC.s: buffer_s,
+                        self.AC.a_his: buffer_a,
+                        self.AC.v_target: buffer_v_target,
                     }
-                    LOCAL_AC.update_global(feed_dict)
+                    self.AC.update_global(feed_dict)
                     buffer_s, buffer_a, buffer_r = [], [], []
-                    LOCAL_AC.pull_global()
+                    self.AC.pull_global()
 
-                if res.done:
-                    res = request_torque(step, 0)
-                    print("done episode")
+                s = s_
+                total_step += 1
+                if done:
+                    if len(GLOBAL_RUNNING_R) == 0:  # record running episode reward
+                        GLOBAL_RUNNING_R.append(ep_r)
+                    else:
+                        GLOBAL_RUNNING_R.append(0.9 * GLOBAL_RUNNING_R[-1] + 0.1 * ep_r)
+                    print(
+                        self.name,
+                        "Ep:", GLOBAL_EP,
+                        "| Ep_r: %i" % GLOBAL_RUNNING_R[-1],
+                          )
+                    GLOBAL_EP += 1
                     break
-                # rospy.loginfo("position_new:%s, velocity:%s, current:%s", res.position_new, res.velocity, res.current)
-                # after getting the responce, calc the next move and call step service again
+
+if __name__ == "__main__":
+    SESS = tf.Session()
+
+    with tf.device("/cpu:0"):
+        OPT_A = tf.train.RMSPropOptimizer(LR_A, name='RMSPropA')
+        OPT_C = tf.train.RMSPropOptimizer(LR_C, name='RMSPropC')
+        GLOBAL_AC = ACNet(GLOBAL_NET_SCOPE)  # we only need its params
+        workers = []
+        # Create worker
+        for i in range(N_WORKERS):
+            i_name = 'W_%i' % i   # worker name
+            workers.append(Worker(i_name, GLOBAL_AC))
+
+    COORD = tf.train.Coordinator()
+    SESS.run(tf.global_variables_initializer())
+
+    if OUTPUT_GRAPH:
+        if os.path.exists(LOG_DIR):
+            shutil.rmtree(LOG_DIR)
+        tf.summary.FileWriter(LOG_DIR, SESS.graph)
+
+    worker_threads = []
+    for worker in workers:
+        job = lambda: worker.work()
+        t = threading.Thread(target=job)
+        t.start()
+        worker_threads.append(t)
+    COORD.join(worker_threads)
+
+    plt.plot(np.arange(len(GLOBAL_RUNNING_R)), GLOBAL_RUNNING_R)
+    plt.xlabel('step')
+    plt.ylabel('Total moving reward')
+    plt.show()
+
