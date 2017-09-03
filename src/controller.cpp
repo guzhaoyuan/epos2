@@ -35,7 +35,7 @@
 
 ros::Time begin;
 // ros::Duration interval(1.0); // 1s
-ros::Duration interval(0,30000000); // 0s,30ms
+ros::Duration interval(0,33000000); // 0s,33ms
 ros::Time next;
 
 int position_old, position_new; // for calc velocity

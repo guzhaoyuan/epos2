@@ -13,8 +13,8 @@ ENTROPY_BETA = 0.01
 LR_A = 0.0001    # learning rate for actor
 LR_C = 0.001    # learning rate for critic
 GLOBAL_NET_SCOPE = 'Global_Net'
-MAX_GLOBAL_EP = 100 # for episodes
-UPDATE_GLOBAL_ITER = 10 # for update
+MAX_GLOBAL_EP = 10
+UPDATE_GLOBAL_ITER = 10
 GLOBAL_RUNNING_R = []
 
 def request_torque(position, current, init=0):
@@ -56,6 +56,36 @@ class Env(object):
 
     def random_action(self):
         return np.random.rand(self.action_space)
+
+def shuffle():
+    pass
+
+def showoff(global_agent):
+    print ("now showoff result")
+    AC = ACNet('showoff_agent', global_agent)
+    AC.pull_global()
+    for i in range(5):
+        buffer_s, buffer_a, buffer_r = [], [], []
+        step = 0
+        ep_r = 0
+        s = request_init()
+        while(True):
+            step += 1
+
+            a = LOCAL_AC.choose_action(s)
+            res = request_torque(step, a)
+            print "state:", s, ",action:", a[0], ",\treward:", res.reward
+            # res = request_torque(step, env.random_action()[0]*4-2)
+            # res = request_torque(step, 0)
+            s_ = np.array(res.state_new)
+            s = s_
+            ep_r += res.reward
+
+            if res.done:
+                res = request_torque(step, 0)
+                GLOBAL_RUNNING_R.append(ep_r)
+                print("done episode, reward:", ep_r)
+                break
 
 class ACNet(object):
     def __init__(self, scope, globalAC=None):
@@ -125,32 +155,6 @@ class ACNet(object):
         s = s[np.newaxis, :]
         return SESS.run(self.A, {self.s: s})[0]
 
-def showoff(global_agent):
-    print ("now showoff result")
-    AC = ACNet('showoff_agent', global_agent)
-    AC.pull_global()
-    for i in range(2):
-        buffer_s, buffer_a, buffer_r = [], [], []
-        step = 0
-        ep_r = 0
-        s = request_init()
-        while(True):
-            step += 1
-
-            a = LOCAL_AC.choose_action(s)
-            res = request_torque(step, a)
-            print "state:", s, ",action:", a[0], ",\treward:", res.reward
-            # res = request_torque(step, env.random_action()[0]*4-2)
-            # res = request_torque(step, 0)
-            s_ = np.array(res.state_new)
-            s = s_
-            ep_r += res.reward
-
-            if res.done:
-                res = request_torque(step, 0)
-                GLOBAL_RUNNING_R.append(ep_r)
-                print("done episode, reward:", ep_r)
-                break
 
 if __name__ == "__main__":
     rospy.on_shutdown(myhook)
@@ -176,64 +180,86 @@ if __name__ == "__main__":
         res = request_torque(0, torque)
         print("position_new:", res.position_new, "\tvelocity:", res.velocity, "\treward:", res.reward)#, "current:", res.current, 
     else:
-        pickle_file = 'data/dataset-'+datetime.now().strftime('%m-%d-%H:%M')+'.pkl'
-        list_dict = []
-        for i in range(MAX_GLOBAL_EP):
-            buffer_s, buffer_a, buffer_r = [], [], []
-            step = 0
-            ep_r = 0
-            s = request_init()
-            while(True):
-                # init the state by call env.reset(), getting the init state from the service
-                # calculate the next move
-                # call step service
-                step += 1
+        pickle_file = 'data/dataset-09-03-06:26.pkl'
+        with open(pickle_file,'rb') as f:
+            unpickled = []
+            while True:
+                try:
+                    unpickled.append(pickle.load(f))
+                except EOFError:
+                    break
 
-                a = LOCAL_AC.choose_action(s)
-                res = request_torque(step, a)
-                print "state:", s, ",action:", a[0], ",\treward:", res.reward
-                # res = request_torque(step, env.random_action()[0]*4-2)
-                # res = request_torque(step, 0)
-                s_ = np.array(res.state_new)
-                buffer_s.append(s)
-                buffer_a.append(a)
-                buffer_r.append((res.reward+8)/8)    # normalize
-                # print "position_new:", res.position_new, "velocity:", res.velocity, "reward:", res.reward#, "current:", res.current, 
-                s = s_
-                ep_r += res.reward
+        num_data = len(unpickled[0])
 
-                if step % UPDATE_GLOBAL_ITER == 0 or res.done:   # update global and assign to local net
-                    if res.done:
-                        v_s_ = 0   # terminal
-                    else:
-                        v_s_ = SESS.run(LOCAL_AC.v, {LOCAL_AC.s: s_[np.newaxis, :]})[0, 0]
-                    buffer_v_target = []
-                    for r in buffer_r[::-1]:    # reverse buffer r
-                        v_s_ = r + GAMMA * v_s_
-                        buffer_v_target.append(v_s_)
-                    buffer_v_target.reverse()
-
-                    buffer_s, buffer_a, buffer_v_target = np.vstack(buffer_s), np.vstack(buffer_a), np.vstack(buffer_v_target)
-                    dictionary = {'s': buffer_s, 'a': buffer_a, 'v_target': buffer_v_target, 'done':res.done}
-                    list_dict.append(dictionary)
-                    with open(pickle_file, 'wb') as f:
-                        pickle.dump(list_dict, f)
-                    
-                    feed_dict = {
+        for i in range(num_data):
+            buffer_s = unpickled[0][i]['s']
+            buffer_a = unpickled[0][i]['a']
+            buffer_v_target = unpickled[0][i]['v_target']
+            feed_dict = {
                         LOCAL_AC.s: buffer_s,
                         LOCAL_AC.a_his: buffer_a,
                         LOCAL_AC.v_target: buffer_v_target,
                     }
-                    LOCAL_AC.update_global(feed_dict)
-                    buffer_s, buffer_a, buffer_r = [], [], []
-                    LOCAL_AC.pull_global()
+            LOCAL_AC.update_global(feed_dict)
 
-                if res.done:
-                    res = request_torque(step, 0)
-                    GLOBAL_RUNNING_R.append(ep_r)
-                    print("done episode, reward:", ep_r)
-                    break
+    showoff(GLOBAL_AC)
+    
+        # for i in range(MAX_GLOBAL_EP):
+        #     buffer_s, buffer_a, buffer_r = [], [], []
+        #     f=open('data/dataset-'+datetime.now().strftime('%m-%d-%H:%M')+'.pkl', 'wb')
+        #     step = 0
+        #     ep_r = 0
+        #     s = request_init()
+        #     while(True):
+        #         # init the state by call env.reset(), getting the init state from the service
+        #         # calculate the next move
+        #         # call step service
+        #         step += 1
+
+        #         a = LOCAL_AC.choose_action(s)
+        #         res = request_torque(step, a)
+        #         print "state:", s, ",action:", a[0], ",\treward:", res.reward
+        #         # res = request_torque(step, env.random_action()[0]*4-2)
+        #         # res = request_torque(step, 0)
+        #         s_ = np.array(res.state_new)
+        #         buffer_s.append(s)
+        #         buffer_a.append(a)
+        #         buffer_r.append((res.reward+8)/8)    # normalize
+        #         # print "position_new:", res.position_new, "velocity:", res.velocity, "reward:", res.reward#, "current:", res.current, 
+        #         s = s_
+        #         ep_r += res.reward
+
+        #         if step % UPDATE_GLOBAL_ITER == 0 or res.done:   # update global and assign to local net
+        #             if res.done:
+        #                 v_s_ = 0   # terminal
+        #             else:
+        #                 v_s_ = SESS.run(LOCAL_AC.v, {LOCAL_AC.s: s_[np.newaxis, :]})[0, 0]
+        #             buffer_v_target = []
+        #             for r in buffer_r[::-1]:    # reverse buffer r
+        #                 v_s_ = r + GAMMA * v_s_
+        #                 buffer_v_target.append(v_s_)
+        #             buffer_v_target.reverse()
+
+        #             buffer_s, buffer_a, buffer_v_target = np.vstack(buffer_s), np.vstack(buffer_a), np.vstack(buffer_v_target)
+        #             dictionary = {'s': buffer_s, 'a': buffer_a, 'v_target': buffer_v_target, 'done':res.done}
+                    
+        #             pickle.dump(dictionary, f)
+                    
+        #             feed_dict = {
+        #                 LOCAL_AC.s: buffer_s,
+        #                 LOCAL_AC.a_his: buffer_a,
+        #                 LOCAL_AC.v_target: buffer_v_target,
+        #             }
+        #             LOCAL_AC.update_global(feed_dict)
+        #             buffer_s, buffer_a, buffer_r = [], [], []
+        #             LOCAL_AC.pull_global()
+
+        #         if res.done:
+        #             res = request_torque(step, 0)
+        #             GLOBAL_RUNNING_R.append(ep_r)
+        #             print("done episode, reward:", ep_r)
+        #             break
             
-        # showoff(GLOBAL_AC)
+        #     f.close()
                 # rospy.loginfo("position_new:%s, velocity:%s, current:%s", res.position_new, res.velocity, res.current)
                 # after getting the responce, calc the next move and call step service again
