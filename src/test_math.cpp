@@ -32,24 +32,26 @@ using namespace std;
 int main(int argc, char **argv)
 {
     int position = 0;
-    float angle_old = 0;
-    while(1){
-        position += 2; // constant angular velocity
-        // int position_global = position+position_offset;
-        // float percentage = (float)(position_global % pulse_per_round)/pulse_per_round;
-        // float angle = percentage*2*PI;
-        float angle = (float)((position+position_offset) % pulse_per_round)/pulse_per_round*2*PI;
+    float angle_old = (float)((position) % 4);///pulse_per_round*2*PI;
+    cout<<position<<angle_old<<endl;
+    // while(1){
+    //     position += 2; // constant angular velocity
+    //     // int position_global = position+position_offset;
+    //     // float percentage = (float)(position_global % pulse_per_round)/pulse_per_round;
+    //     // float angle = percentage*2*PI;
+    //     float angle = (float)((position+position_offset) % pulse_per_round)/pulse_per_round*2*PI;
         
-        // float velocity = -100;
-        float velocity = (angle - angle_old)/0.025;
-        velocity = min(V_HIGH,max(V_LOW,velocity));
-        angle_old = angle;
-        float sin1 = sin(angle);
-        float cos1 = cos(angle);
+    //     // float velocity = -100;
+    //     float velocity = (angle - angle_old)/0.025;
+    //     velocity = min(V_HIGH,max(V_LOW,velocity));
+    //     angle_old = angle;
+    //     float sin1 = sin(angle);
+    //     float cos1 = cos(angle);
 
-        cout<<sin1<<","<<cos1<<","<<velocity<<endl;
-        // cout<<"sin:"<<sin(PI/2)<<endl;
-    }
+    //     cout<<sin1<<","<<cos1<<","<<velocity<<endl;
+    //     // cout<<"sin:"<<sin(PI/2)<<endl;
+    // }
+    //-5.658
 
 	return 0;
 }

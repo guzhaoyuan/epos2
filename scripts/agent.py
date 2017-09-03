@@ -12,7 +12,7 @@ ENTROPY_BETA = 0.01
 LR_A = 0.0001    # learning rate for actor
 LR_C = 0.001    # learning rate for critic
 GLOBAL_NET_SCOPE = 'Global_Net'
-MAX_GLOBAL_EP = 1
+MAX_GLOBAL_EP = 10
 UPDATE_GLOBAL_ITER = 10
 GLOBAL_RUNNING_R = []
 
@@ -163,6 +163,7 @@ if __name__ == "__main__":
 
                 a = LOCAL_AC.choose_action(s)
                 res = request_torque(step, a)
+                print "state:", s, ",action:", a[0], ",\treward:", res.reward
                 # res = request_torque(step, env.random_action()[0]*4-2)
                 # res = request_torque(step, 0)
                 s_ = np.array(res.state_new)
@@ -170,7 +171,6 @@ if __name__ == "__main__":
                 buffer_a.append(a)
                 buffer_r.append((res.reward+8)/8)    # normalize
                 # print "position_new:", res.position_new, "velocity:", res.velocity, "reward:", res.reward#, "current:", res.current, 
-                print("state_new:", s_)
                 s = s_
                 ep_r += res.reward
 

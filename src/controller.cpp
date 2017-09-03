@@ -18,7 +18,7 @@
 #define V_HIGH 20.0f
 #define CURRENT_MAX 2.0f
 #define CURRENT_MIN -2.0f // res.torque = (-1,1)
-#define TORQUE_AMP 80 //torque applied = TORQUE_AMP * res.torque
+#define TORQUE_AMP 1500 //torque applied = TORQUE_AMP * res.torque
 #define MAX_STEP 200
 /**
 	define clockwise is minus, conterclockwise is positive
@@ -51,7 +51,7 @@ int random_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 		get_position(g_pKeyHandle, g_usNodeId, &position_tmp, &ulErrorCode);
 		delta = position_tmp - position_tmp_old;
 		position_tmp_old = position_tmp;
-		ros::Duration(0.1).sleep();// sleep for 0.1s then compare position again
+		ros::Duration(0.2).sleep();// sleep for 0.1s then compare position again
 	}
 	// when move back to zero position, record position and set position offset
 	float angle = PI;
@@ -83,7 +83,7 @@ int zero_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 {
 	if(req.init == 1){
-		zero_init(req, res);
+		random_init(req, res);
 		return true;
 	}else{
 		unsigned int ulErrorCode = 0;
@@ -97,15 +97,25 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 		
 		//calc velocity before angle, using continuous position n angle, rad/s
 		pVelocityIs = (float)(position_new - position_old)/pulse_per_round*2*PI/interval.toSec();
-		// pVelocityIs = min(V_HIGH,max(V_LOW,pVelocityIs)); // soft limit speed
+		if(abs(pVelocityIs) > V_HIGH){
+			torque = req.torque * V_HIGH / pVelocityIs;// this is a strange way, to constrain the velocity
+		}else{
+			torque = req.torque;
+		}
+		pVelocityIs = min(V_HIGH,max(V_LOW,pVelocityIs)); // soft limit speed
 		//calc angle
 		angle_new = (float)((position_new+position_offset) % pulse_per_round)/pulse_per_round*2*PI;
-		if(angle_new > PI)	angle_new-=2*PI; // angle range (-PI , PI]
+		if(angle_new > PI){
+			angle_new -= 2*PI; // angle range (-PI , PI]
+	    }else if(angle_new < -PI){
+	    	angle_new += 2*PI; // angle range (-PI , PI]
+	    }
+
 	    //calc reward
-	    torque = req.torque;
+	    // torque = req.torque;
 	    torque = min(CURRENT_MAX,max(CURRENT_MIN, torque)); // soft limit torque
-		reward = -(angle_old*angle_old + 0.1*pVelocityIs_old*pVelocityIs_old + 0.001*torque*torque);
-		// cout<<angle_new<<",\t"<<pVelocityIs<<",\t"<<reward<<endl;
+		reward = -(angle_old*angle_old + 0.01*pVelocityIs_old*pVelocityIs_old + 0.001*req.torque*req.torque);
+		// cout<<angle_old<<",\t"<<pVelocityIs_old<<",\t"<<req.torque<<",\t"<<reward<<endl;
 
 		// res.current = current;
 		// res.position_new = position_new;
@@ -130,7 +140,7 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 		ROS_INFO("now write: step=%ld, torque=%f", (long int)req.position, TORQUE_AMP*torque);
 		SetCurrentMust(g_pKeyHandle, g_usNodeId, TORQUE_AMP*torque, &ulErrorCode);
 
-		ROS_INFO("now return");
+		// ROS_INFO("now return");
 	}
 	return true;
 }
@@ -162,7 +172,8 @@ int main(int argc, char **argv)
 		LogError("OpenDevice", lResult, ulErrorCode);
 		return lResult;
 	}
-	
+	// clear fault
+	VCS_ClearFault(g_pKeyHandle, g_usNodeId, &ulErrorCode); 
 	SetEnableState(g_pKeyHandle, g_usNodeId, &ulErrorCode);
 	ActivateProfileCurrentMode(g_pKeyHandle, g_usNodeId, &ulErrorCode);
 
