@@ -180,7 +180,7 @@ if __name__ == "__main__":
         res = request_torque(0, torque)
         print("position_new:", res.position_new, "\tvelocity:", res.velocity, "\treward:", res.reward)#, "current:", res.current, 
     else:
-        pickle_file = 'data/dataset-09-03-06:26.pkl'
+        pickle_file = 'data/dataset-09-03-07:44.pkl'
         with open(pickle_file,'rb') as f:
             unpickled = []
             while True:
@@ -189,17 +189,18 @@ if __name__ == "__main__":
                 except EOFError:
                     break
 
-        num_data = len(unpickled[0])
+        num_data = len(unpickled)
 
         for i in range(num_data):
-            buffer_s = unpickled[0][i]['s']
-            buffer_a = unpickled[0][i]['a']
-            buffer_v_target = unpickled[0][i]['v_target']
+            buffer_s = unpickled[i]['s']
+            buffer_a = unpickled[i]['a']
+            buffer_v_target = unpickled[i]['v_target']
             feed_dict = {
                         LOCAL_AC.s: buffer_s,
                         LOCAL_AC.a_his: buffer_a,
                         LOCAL_AC.v_target: buffer_v_target,
                     }
+            print(i)
             LOCAL_AC.update_global(feed_dict)
 
     showoff(GLOBAL_AC)
