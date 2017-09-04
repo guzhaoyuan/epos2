@@ -216,6 +216,8 @@ if __name__ == "__main__":
 
                         buffer_s, buffer_a, buffer_v_target = np.vstack(buffer_s), np.vstack(buffer_a), np.vstack(buffer_v_target)
                         dictionary = {'s': buffer_s, 'a': buffer_a, 'v_target': buffer_v_target, 'done':res.done}
+                        if res.done:
+                            dictionary['r'] = ep_r
                         # list_dict.append(dictionary)
                         
                         pickle.dump(dictionary, f)
@@ -230,7 +232,13 @@ if __name__ == "__main__":
                         LOCAL_AC.pull_global()
 
                     if res.done:
-                        res = request_torque(step, 0)
+                        # make the pendulum stop faster
+                        # if(s[2]<-15):
+                        #     res = request_torque(step+1, 0.2)
+                        # elif(s[2]>15):
+                        #     res = request_torque(step+1,-0.2)
+                        # else:
+                        res = request_torque(step+1, 0)
                         GLOBAL_RUNNING_R.append(ep_r)
                         print("done episode:", episode, ",reward:", ep_r)
                         break

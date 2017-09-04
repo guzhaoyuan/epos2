@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 # pickle_file = 'data/dataset-09-03-06:59.pkl' # this is trained 114 episodes, but found the time lag is severe for pickle write
+# pickle_file = 'data/dataset-09-03-07:53.pkl' # trained for 2 hours, but not able to reproduce.
+# pickle_file = 'data/dataset-09-03-10:13.pkl' # this is trained faster, but still not working, until I found the true reason, 
+# pickle_file = 'data/dataset-09-03-11:53.pkl' # this 300 episode as start training, not good enough
+
 import pickle
 
 # f = open('data/dataset-09-03-05:44.pkl','rb')
@@ -9,7 +13,7 @@ import pickle
 # 	dic = pickle.load(f)
 # 	print dic['a'], 'num',num
 
-pickle_file = 'data/dataset-09-03-07:44.pkl'
+pickle_file = 'data/dataset-09-03-10:13.pkl'
 with open(pickle_file,'rb') as f:
     unpickled = []
     while True:

@@ -45,6 +45,34 @@ short current;
 int random_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 	// need to update angle while random init
 	// wait until position do not change
+	int position_tmp = 0, velocity_tmp = 0, delta = 1;
+	float angle_new;
+	unsigned int ulErrorCode = 0;
+	while(delta != 0 && ros::ok()){
+		get_position(g_pKeyHandle, g_usNodeId, &position_tmp, &ulErrorCode);
+		get_velocity(g_pKeyHandle, g_usNodeId, &velocity_tmp, &ulErrorCode);
+		angle_new = (float)((position_new+position_offset) % pulse_per_round)/pulse_per_round*2*PI;
+		if(angle_new > PI){
+			angle_new -= 2*PI; // angle range (-PI , PI]
+	    }else if(angle_new < -PI){
+	    	angle_new += 2*PI; // angle range (-PI , PI]
+	    }
+		if(abs(angle_new) < PI/2 && abs(velocity_tmp) < 1){// make it difficult to start from top
+			delta = 0;
+		}
+		if(abs(angle_new) > PI/2 && abs(velocity_tmp) < 6){// start from lower position, with a relative low speed
+			delta = 0;
+		}
+		ros::Duration(0.5).sleep();// sleep for 0.4s then compare position again
+	}
+	res.state_new[0] = cos(angle_new);res.state_new[1] = sin(angle_new);res.state_new[2] = velocity_tmp;
+	cout<<"init success, return first state"<<endl;
+	return true;
+}
+
+int down_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
+	// need to update angle while random init
+	// wait until position do not change
 	int delta = 1, position_tmp, position_tmp_old = 0;
 	unsigned int ulErrorCode = 0;
 	while(delta != 0 && ros::ok()){
