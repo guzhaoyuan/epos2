@@ -14,11 +14,11 @@
 #define position_offset 1000 
 #define pulse_per_round 2000
 #define PI 3.14159
-#define V_LOW -20.0f
-#define V_HIGH 20.0f
+#define V_LOW -10.0f
+#define V_HIGH 10.0f
 #define CURRENT_MAX 2.0f
 #define CURRENT_MIN -2.0f // res.torque = (-1,1)
-#define TORQUE_AMP 1500 //torque applied = TORQUE_AMP * res.torque
+#define TORQUE_AMP 1500 //torque applied = TORQUE_AMP * res.torque // 2000 is for max real
 #define MAX_STEP 200
 /**
 	define clockwise is minus, conterclockwise is positive
@@ -117,7 +117,7 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 		unsigned int ulErrorCode = 0;
 
 
-		ROS_INFO("now read position n current");
+		// ROS_INFO("now read position n current");
 		get_position(g_pKeyHandle, g_usNodeId, &position_new, &ulErrorCode);
 
 		// get_current(g_pKeyHandle, g_usNodeId, &current, &ulErrorCode);
@@ -143,7 +143,7 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 	    // torque = req.torque;
 	    torque = min(CURRENT_MAX,max(CURRENT_MIN, torque)); // soft limit torque
 		reward = -(angle_old*angle_old + 0.01*pVelocityIs_old*pVelocityIs_old + 0.001*req.torque*req.torque);
-		// cout<<angle_old<<",\t"<<pVelocityIs_old<<",\t"<<req.torque<<",\t"<<reward<<endl;
+		cout<<position_old<<",\t"<<angle_old<<",\t"<<pVelocityIs_old<<",\t"<<req.torque<<",\t"<<reward<<endl;
 
 		// res.current = current;
 		// res.position_new = position_new;
@@ -160,12 +160,12 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 		// the force transform of the data type can cause problem
 		while((next - ros::Time::now()).toSec()<0){
 			next += interval;
-			ROS_INFO("");
+			// ROS_INFO("");
 		}
 		(next - ros::Time::now()).sleep();
 
 		// use position as step
-		ROS_INFO("now write: step=%ld, torque=%f", (long int)req.position, TORQUE_AMP*torque);
+		// ROS_INFO("now write: step=%ld, torque=%f", (long int)req.position, TORQUE_AMP*torque);
 		SetCurrentMust(g_pKeyHandle, g_usNodeId, TORQUE_AMP*torque, &ulErrorCode);
 
 		// ROS_INFO("now return");

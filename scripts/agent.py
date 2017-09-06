@@ -137,7 +137,7 @@ def showoff(global_agent):
         while(True):
             step += 1
 
-            a = LOCAL_AC.choose_action(s)
+            a = AC.choose_action(s)
             res = request_torque(step, a)
             print "state:", s, ",action:", a[0], ",\treward:", res.reward
             # res = request_torque(step, env.random_action()[0]*4-2)

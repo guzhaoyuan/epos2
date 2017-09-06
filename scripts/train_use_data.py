@@ -13,7 +13,7 @@ ENTROPY_BETA = 0.01
 LR_A = 0.0001    # learning rate for actor
 LR_C = 0.001    # learning rate for critic
 GLOBAL_NET_SCOPE = 'Global_Net'
-MAX_GLOBAL_EP = 10
+MAX_GLOBAL_EP = 300
 UPDATE_GLOBAL_ITER = 10
 GLOBAL_RUNNING_R = []
 
@@ -180,7 +180,7 @@ if __name__ == "__main__":
         res = request_torque(0, torque)
         print("position_new:", res.position_new, "\tvelocity:", res.velocity, "\treward:", res.reward)#, "current:", res.current, 
     else:
-        pickle_file = 'data/dataset-09-03-10:13.pkl'
+        pickle_file = 'data/dataset-09-05-07:15.pkl'
         with open(pickle_file,'rb') as f:
             unpickled = []
             while True:
@@ -190,7 +190,7 @@ if __name__ == "__main__":
                     break
 
         num_data = len(unpickled)
-
+        LOCAL_AC.pull_global()
         for i in range(num_data):
             buffer_s = unpickled[i]['s']
             buffer_a = unpickled[i]['a']
@@ -204,71 +204,71 @@ if __name__ == "__main__":
             LOCAL_AC.update_global(feed_dict)
             LOCAL_AC.pull_global()
 
-        showoff(GLOBAL_AC)
+        # showoff(GLOBAL_AC)
     
-        # pickle_file = 'data/dataset-'+datetime.now().strftime('%m-%d-%H:%M')+'.pkl'
-        # list_dict = []
-        # with open(pickle_file, 'wb') as f:
-        #     for episode in range(MAX_GLOBAL_EP):
-        #         buffer_s, buffer_a, buffer_r = [], [], []
-        #         step = 0
-        #         ep_r = 0
-        #         s = request_init()
-        #         while(True):
-        #             # init the state by call env.reset(), getting the init state from the service
-        #             # calculate the next move
-        #             # call step service
-        #             step += 1
+        pickle_file = 'data/dataset-'+datetime.now().strftime('%m-%d-%H:%M')+'.pkl'
+        list_dict = []
+        with open(pickle_file, 'wb') as f:
+            for episode in range(MAX_GLOBAL_EP):
+                buffer_s, buffer_a, buffer_r = [], [], []
+                step = 0
+                ep_r = 0
+                s = request_init()
+                while(True):
+                    # init the state by call env.reset(), getting the init state from the service
+                    # calculate the next move
+                    # call step service
+                    step += 1
 
-        #             a = LOCAL_AC.choose_action(s)
-        #             res = request_torque(step, a)
-        #             print "state:", s, ",action:", a[0], ",\treward:", res.reward
-        #             # res = request_torque(step, env.random_action()[0]*4-2)
-        #             # res = request_torque(step, 0)
-        #             s_ = np.array(res.state_new)
-        #             buffer_s.append(s)
-        #             buffer_a.append(a)
-        #             buffer_r.append((res.reward+8)/8)    # normalize
-        #             # print "position_new:", res.position_new, "velocity:", res.velocity, "reward:", res.reward#, "current:", res.current, 
-        #             s = s_
-        #             ep_r += res.reward
+                    a = LOCAL_AC.choose_action(s)
+                    res = request_torque(step, a)
+                    print "state:", s, ",action:", a[0], ",\treward:", res.reward
+                    # res = request_torque(step, env.random_action()[0]*4-2)
+                    # res = request_torque(step, 0)
+                    s_ = np.array(res.state_new)
+                    buffer_s.append(s)
+                    buffer_a.append(a)
+                    buffer_r.append((res.reward+8)/8)    # normalize
+                    # print "position_new:", res.position_new, "velocity:", res.velocity, "reward:", res.reward#, "current:", res.current, 
+                    s = s_
+                    ep_r += res.reward
 
-        #             if step % UPDATE_GLOBAL_ITER == 0 or res.done:   # update global and assign to local net
-        #                 if res.done:
-        #                     v_s_ = 0   # terminal
-        #                 else:
-        #                     v_s_ = SESS.run(LOCAL_AC.v, {LOCAL_AC.s: s_[np.newaxis, :]})[0, 0]
-        #                 buffer_v_target = []
-        #                 for r in buffer_r[::-1]:    # reverse buffer r
-        #                     v_s_ = r + GAMMA * v_s_
-        #                     buffer_v_target.append(v_s_)
-        #                 buffer_v_target.reverse()
+                    if step % UPDATE_GLOBAL_ITER == 0 or res.done:   # update global and assign to local net
+                        if res.done:
+                            v_s_ = 0   # terminal
+                        else:
+                            v_s_ = SESS.run(LOCAL_AC.v, {LOCAL_AC.s: s_[np.newaxis, :]})[0, 0]
+                        buffer_v_target = []
+                        for r in buffer_r[::-1]:    # reverse buffer r
+                            v_s_ = r + GAMMA * v_s_
+                            buffer_v_target.append(v_s_)
+                        buffer_v_target.reverse()
 
-        #                 buffer_s, buffer_a, buffer_v_target = np.vstack(buffer_s), np.vstack(buffer_a), np.vstack(buffer_v_target)
-        #                 dictionary = {'s': buffer_s, 'a': buffer_a, 'v_target': buffer_v_target, 'done':res.done}
-        #                 if res.done:
-        #                     dictionary['r'] = ep_r
-        #                 # list_dict.append(dictionary)
+                        buffer_s, buffer_a, buffer_v_target = np.vstack(buffer_s), np.vstack(buffer_a), np.vstack(buffer_v_target)
+                        dictionary = {'s': buffer_s, 'a': buffer_a, 'v_target': buffer_v_target, 'done':res.done}
+                        if res.done:
+                            dictionary['r'] = ep_r
+                        # list_dict.append(dictionary)
                         
-        #                 pickle.dump(dictionary, f)
+                        pickle.dump(dictionary, f)
                         
-        #                 feed_dict = {
-        #                     LOCAL_AC.s: buffer_s,
-        #                     LOCAL_AC.a_his: buffer_a,
-        #                     LOCAL_AC.v_target: buffer_v_target,
-        #                 }
-        #                 LOCAL_AC.update_global(feed_dict)
-        #                 buffer_s, buffer_a, buffer_r = [], [], []
-        #                 LOCAL_AC.pull_global()
+                        feed_dict = {
+                            LOCAL_AC.s: buffer_s,
+                            LOCAL_AC.a_his: buffer_a,
+                            LOCAL_AC.v_target: buffer_v_target,
+                        }
+                        LOCAL_AC.update_global(feed_dict)
+                        buffer_s, buffer_a, buffer_r = [], [], []
+                        LOCAL_AC.pull_global()
 
-        #             if res.done:
-        #                 # make the pendulum stop faster
-        #                 # if(s[2]<-15):
-        #                 #     res = request_torque(step+1, 0.2)
-        #                 # elif(s[2]>15):
-        #                 #     res = request_torque(step+1,-0.2)
-        #                 # else:
-        #                 res = request_torque(step+1, 0)
-        #                 GLOBAL_RUNNING_R.append(ep_r)
-        #                 print("done episode:", episode, ",reward:", ep_r)
-        #                 break
+                    if res.done:
+                        # make the pendulum stop faster
+                        # if(s[2]<-15):
+                        #     res = request_torque(step+1, 0.2)
+                        # elif(s[2]>15):
+                        #     res = request_torque(step+1,-0.2)
+                        # else:
+                        res = request_torque(step+1, 0)
+                        GLOBAL_RUNNING_R.append(ep_r)
+                        print("done episode:", episode, ",reward:", ep_r)
+                        break

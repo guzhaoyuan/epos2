@@ -1,14 +1,4 @@
-"""
-Asynchronous Advantage Actor Critic (A3C) with continuous action space, Reinforcement Learning.
-
-The Pendulum example.
-
-View more on my tutorial page: https://morvanzhou.github.io/tutorials/
-
-Using:
-tensorflow r1.3
-gym 0.8.0
-"""
+#!/usr/bin/env python
 
 import multiprocessing
 import threading
@@ -24,7 +14,7 @@ OUTPUT_GRAPH = True
 LOG_DIR = './log'
 N_WORKERS = multiprocessing.cpu_count()
 MAX_EP_STEP = 200
-MAX_GLOBAL_EP = 2000
+MAX_GLOBAL_EP = 1000
 GLOBAL_NET_SCOPE = 'Global_Net'
 UPDATE_GLOBAL_ITER = 10
 GAMMA = 0.9
@@ -169,6 +159,11 @@ class Worker(object):
                         "| Ep_r: %i" % GLOBAL_RUNNING_R[-1],
                           )
                     GLOBAL_EP += 1
+                    if ep_r > -300:
+                        saver.save(SESS, 'model.ckpt',
+                           global_step=GLOBAL_EP)
+
+
                     break
 
 if __name__ == "__main__":
@@ -185,6 +180,7 @@ if __name__ == "__main__":
             workers.append(Worker(i_name, GLOBAL_AC))
 
     COORD = tf.train.Coordinator()
+    saver = tf.train.Saver()
     SESS.run(tf.global_variables_initializer())
 
     if OUTPUT_GRAPH:
