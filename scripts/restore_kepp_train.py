@@ -284,7 +284,65 @@ if __name__ == "__main__":
     saver = tf.train.Saver()
     SESS.run(tf.global_variables_initializer())
 
-    saver.restore(SESS, 'model/ckpt-10002')
+    saver.restore(SESS, 'model/ckpt-64')
 
-    showoff(env, GLOBAL_AC)
-    # showoffReal(GLOBAL_AC)
+    showoffReal(GLOBAL_AC)
+
+    LOCAL_AC = ACNet('L_0', GLOBAL_AC)
+    LOCAL_AC.pull_global()
+
+    list_dict = []
+
+    for episode in range(MAX_GLOBAL_EP):
+        buffer_s, buffer_a, buffer_r = [], [], []
+        step = 0
+        ep_r = 0
+        s = request_init()
+        while(True):
+            step += 1
+
+            a = LOCAL_AC.choose_action(s)
+            res = request_torque(step, a)
+            print "state:", s, ",action:", a[0], ",\treward:", res.reward
+            # res = request_torque(step, env.random_action()[0]*4-2)
+            # res = request_torque(step, 0)
+            s_ = np.array(res.state_new)
+            buffer_s.append(s)
+            buffer_a.append(a)
+            buffer_r.append((res.reward+8)/8)    # normalize
+            # print "position_new:", res.position_new, "velocity:", res.velocity, "reward:", res.reward#, "current:", res.current, 
+            s = s_
+            ep_r += res.reward
+
+            if step % UPDATE_GLOBAL_ITER == 0 or res.done:   # update global and assign to local net
+                if res.done:
+                    v_s_ = 0   # terminal
+                else:
+                    v_s_ = SESS.run(LOCAL_AC.v, {LOCAL_AC.s: s_[np.newaxis, :]})[0, 0]
+                buffer_v_target = []
+                for r in buffer_r[::-1]:    # reverse buffer r
+                    v_s_ = r + GAMMA * v_s_
+                    buffer_v_target.append(v_s_)
+                buffer_v_target.reverse()
+
+                buffer_s, buffer_a, buffer_v_target = np.vstack(buffer_s), np.vstack(buffer_a), np.vstack(buffer_v_target)
+
+                feed_dict = {
+                    LOCAL_AC.s: buffer_s,
+                    LOCAL_AC.a_his: buffer_a,
+                    LOCAL_AC.v_target: buffer_v_target,
+                }
+                LOCAL_AC.update_global(feed_dict)
+                buffer_s, buffer_a, buffer_r = [], [], []
+                LOCAL_AC.pull_global()
+
+            if res.done:
+                res = request_torque(step+1, 0)
+
+                if ep_r > -300:
+                    saver.save(SESS, 'model/ckpt',
+                       global_step=episode)
+
+                GLOBAL_RUNNING_R.append(ep_r)
+                print("done episode:", episode, ",reward:", ep_r)
+                break

@@ -14,7 +14,7 @@ OUTPUT_GRAPH = True
 LOG_DIR = './log'
 N_WORKERS = multiprocessing.cpu_count()
 MAX_EP_STEP = 200
-MAX_GLOBAL_EP = 1000
+MAX_GLOBAL_EP = 10000
 GLOBAL_NET_SCOPE = 'Global_Net'
 UPDATE_GLOBAL_ITER = 10
 GAMMA = 0.9
@@ -114,8 +114,8 @@ class Worker(object):
             s = self.env.reset()
             ep_r = 0
             for ep_t in range(MAX_EP_STEP):
-                if self.name == 'W_0':
-                    self.env.render()
+                # if self.name == 'W_0':
+                #     self.env.render()
                 a = self.AC.choose_action(s)
                 s_, r, done, info = self.env.step(a)
                 done = True if ep_t == MAX_EP_STEP - 1 else False
@@ -159,8 +159,8 @@ class Worker(object):
                         "| Ep_r: %i" % GLOBAL_RUNNING_R[-1],
                           )
                     GLOBAL_EP += 1
-                    if ep_r > -300:
-                        saver.save(SESS, 'model.ckpt',
+                    if ep_r > -150:
+                        saver.save(SESS, 'model/ckpt',
                            global_step=GLOBAL_EP)
 
 
@@ -182,11 +182,6 @@ if __name__ == "__main__":
     COORD = tf.train.Coordinator()
     saver = tf.train.Saver()
     SESS.run(tf.global_variables_initializer())
-
-    if OUTPUT_GRAPH:
-        if os.path.exists(LOG_DIR):
-            shutil.rmtree(LOG_DIR)
-        tf.summary.FileWriter(LOG_DIR, SESS.graph)
 
     worker_threads = []
     for worker in workers:

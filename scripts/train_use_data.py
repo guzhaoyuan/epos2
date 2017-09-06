@@ -170,7 +170,7 @@ if __name__ == "__main__":
         OPT_A = tf.train.RMSPropOptimizer(LR_A, name='RMSPropA')
         OPT_C = tf.train.RMSPropOptimizer(LR_C, name='RMSPropC')
         GLOBAL_AC = ACNet(GLOBAL_NET_SCOPE)
-        LOCAL_AC = ACNet('W_0', GLOBAL_AC)  # we only need its params
+        LOCAL_AC = ACNet('W_0', GLOBAL_AC)
 
     SESS.run(tf.global_variables_initializer())
 
