@@ -284,7 +284,7 @@ if __name__ == "__main__":
     saver = tf.train.Saver()
     SESS.run(tf.global_variables_initializer())
 
-    saver.restore(SESS, 'model/ckpt-10002')
+    saver.restore(SESS, 'model/ckpt-73')
 
     showoff(env, GLOBAL_AC)
     # showoffReal(GLOBAL_AC)
