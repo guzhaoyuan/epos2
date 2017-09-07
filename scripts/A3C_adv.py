@@ -12,9 +12,9 @@ import matplotlib.pyplot as plt
 GAME = 'Pendulum-v0'
 OUTPUT_GRAPH = True
 LOG_DIR = './log'
-N_WORKERS = multiprocessing.cpu_count()
+N_WORKERS = 4#multiprocessing.cpu_count()
 MAX_EP_STEP = 200
-MAX_GLOBAL_EP = 1000
+MAX_GLOBAL_EP = 1500
 GLOBAL_NET_SCOPE = 'Global_Net'
 UPDATE_GLOBAL_ITER = 10
 GAMMA = 0.9
@@ -247,10 +247,10 @@ class Worker(object):
                     }
 
                     self.AC.update_global(feed_dict)
-                    # self.AC_Adv.update_global(feed_dict_adv)
+                    self.AC_Adv.update_global(feed_dict_adv)
                     buffer_s, buffer_a, buffer_r, buffer_a_adv, buffer_r_adv = [], [], [], [], []
                     self.AC.pull_global()
-                    # self.AC_Adv.pull_global()
+                    self.AC_Adv.pull_global()
 
                 s = s_
                 total_step += 1
