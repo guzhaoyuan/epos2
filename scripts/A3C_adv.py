@@ -14,7 +14,7 @@ OUTPUT_GRAPH = True
 LOG_DIR = './log'
 N_WORKERS = multiprocessing.cpu_count()
 MAX_EP_STEP = 200
-MAX_GLOBAL_EP = 1000
+MAX_GLOBAL_EP = 2000
 GLOBAL_NET_SCOPE = 'Global_Net'
 UPDATE_GLOBAL_ITER = 10
 GAMMA = 0.9
@@ -22,8 +22,10 @@ ENTROPY_BETA = 0.01
 LR_A = 0.0001    # learning rate for actor
 LR_C = 0.001    # learning rate for critic
 GLOBAL_RUNNING_R = []
+GLOBAL_MEAN_R = []
 GLOBAL_EP = 0
-
+X_amp = 0.01
+isConverged = 0
 env = gym.make(GAME)
 
 N_S = env.observation_space.shape[0]
@@ -31,7 +33,7 @@ N_A = env.action_space.shape[0]
 A_BOUND = [env.action_space.low, env.action_space.high]
 
 N_Adv_A = 1 #dimension of action space of adversary agent
-ADV_BOUND = [i*0.01 for i in A_BOUND]# the external force for the adv is a little smaller
+ADV_BOUND = [i*X_amp for i in A_BOUND]# the external force for the adv is a little smaller
 
 class ACNet(object):
     def __init__(self, scope, globalAC=None):
@@ -186,7 +188,7 @@ class Worker(object):
         self.AC_Adv = ACNetAdv(name, globalACAdv)
 
     def work(self):
-        global GLOBAL_RUNNING_R, GLOBAL_EP
+        global GLOBAL_RUNNING_R, GLOBAL_EP, MAX_GLOBAL_EP, X_amp, isConverged
         total_step = 1
         buffer_s, buffer_a, buffer_r, buffer_a_adv, buffer_r_adv = [], [], [], [], []
         while not COORD.should_stop() and GLOBAL_EP < MAX_GLOBAL_EP:
@@ -197,9 +199,10 @@ class Worker(object):
                 #     self.env.render()
                 a = self.AC.choose_action(s)
                 a_adv = self.AC_Adv.choose_action(s)
-
-                s_, r, done, info = self.env.step(a-a_adv)
-                # s_, r, done, info = self.env.step(a)
+                if isConverged:
+                    s_, r, done, info = self.env.step(a-a_adv)
+                else:
+                    s_, r, done, info = self.env.step(a)
                 done = True if ep_t == MAX_EP_STEP - 1 else False
 
                 # print("s:",s,"a:",a,"adv:",a_adv,"r:",r)
@@ -247,27 +250,28 @@ class Worker(object):
                     }
 
                     self.AC.update_global(feed_dict)
-                    # self.AC_Adv.update_global(feed_dict_adv)
+                    self.AC_Adv.update_global(feed_dict_adv)
                     buffer_s, buffer_a, buffer_r, buffer_a_adv, buffer_r_adv = [], [], [], [], []
                     self.AC.pull_global()
-                    # self.AC_Adv.pull_global()
+                    self.AC_Adv.pull_global()
 
                 s = s_
                 total_step += 1
                 if done:
-                    if len(GLOBAL_RUNNING_R) == 0:  # record running episode reward
-                        GLOBAL_RUNNING_R.append(ep_r)
-                    else:
-                        GLOBAL_RUNNING_R.append(0.9 * GLOBAL_RUNNING_R[-1] + 0.1 * ep_r)
+                    GLOBAL_RUNNING_R.append(ep_r)
+                    GLOBAL_MEAN_R.append(np.mean(GLOBAL_RUNNING_R[-50:]))
                     print(
                         self.name,
                         "Ep:", GLOBAL_EP,
-                        "| Ep_r: %i" % GLOBAL_RUNNING_R[-1],
+                        "| Ep_r: %i" % GLOBAL_MEAN_R[-1],
                           )
                     GLOBAL_EP += 1
-                    if ep_r > -150:
+                    if ep_r > -250:
                         saver.save(SESS, 'model_adv/double',
                            global_step=GLOBAL_EP)
+                        X_amp *= 2
+                        MAX_GLOBAL_EP += 500
+
                     break
 
 

@@ -1,12 +1,5 @@
 #!/usr/bin/env python
 
-'''
-this script compares the two agent in normal environment,
-we expect the double pro gives a better result than the single pro
-
-this require us to load 2 checkpoints, one for single and one for double
-'''
-
 import multiprocessing
 import threading
 import tensorflow as tf
@@ -29,6 +22,7 @@ ENTROPY_BETA = 0.01
 LR_A = 0.0001    # learning rate for actor
 LR_C = 0.001    # learning rate for critic
 GLOBAL_RUNNING_R = []
+GLOBAL_MEAN_R = []
 GLOBAL_EP = 0
 
 env = gym.make(GAME)
@@ -38,69 +32,7 @@ N_A = env.action_space.shape[0]
 A_BOUND = [env.action_space.low, env.action_space.high]
 
 N_Adv_A = 1 #dimension of action space of adversary agent
-ADV_BOUND = [i*0.05 for i in A_BOUND]# the external force for the adv is a little smaller
-
-
-def showoff(env, global_agent):
-    print ("now showoff result")
-    AC = ACNet('showoff_agent', global_agent)
-    AC.pull_global()
-
-    for episodes in range(5):
-       state = env.reset()
-       reward_all = 0
-       while(True):
-           env.render()
-           action = AC.choose_action(state)
-           state_new, reward, done, _ = env.step(action) # take a random action
-           reward_all = reward_all + reward
-           if done:
-               break
-           state = state_new
-       print ("episode:", episodes, ",reward: ", reward_all)
-
-    reward_all_track = []
-    for episodes in range(30):
-        state = env.reset()
-        reward_all = 0
-        for i in range(1000):
-            action = AC.choose_action(state)
-            state_new, reward, done, _ = env.step(action) # take a random action
-            reward_all = reward_all + reward
-            if done:
-                break
-            state = state_new
-        reward_all_track.append(reward_all)
-    print(reward_all_track)
-    print( "final reward", np.mean(reward_all_track[-100:]))
-    return
-
-def showoffReal(global_agent):
-    print ("now showoff result")
-    AC = ACNet('showoff_agent', global_agent)
-    AC.pull_global()
-    for i in range(5):
-        buffer_s, buffer_a, buffer_r = [], [], []
-        step = 0
-        ep_r = 0
-        s = request_init()
-        while(True):
-            step += 1
-
-            a = AC.choose_action(s)
-            res = request_torque(step, a)
-            print "state:", s, ",action:", a[0], ",\treward:", res.reward
-            # res = request_torque(step, env.random_action()[0]*4-2)
-            # res = request_torque(step, 0)
-            s_ = np.array(res.state_new)
-            s = s_
-            ep_r += res.reward
-
-            if res.done:
-                res = request_torque(step, 0)
-                print("done episode, reward:", ep_r)
-                break
-
+ADV_BOUND = [i*0.01 for i in A_BOUND]# the external force for the adv is a little smaller
 
 class ACNet(object):
     def __init__(self, scope, globalAC=None):
@@ -244,9 +176,133 @@ class ACNetAdv(object):
 
     def get_norm(self, s):  # run by a local
         s = s[np.newaxis, :]
-        return SESS.run([self.mu, self.sigma], {self.s: s})	
+        return SESS.run([self.mu, self.sigma], {self.s: s})
 
+class Worker(object):
+    def __init__(self, name, globalAC, globalACAdv):
+        self.env = gym.make(GAME).unwrapped
+        self.name = name
+        print(self.name)
+        self.AC = ACNet(name, globalAC)
+        self.AC_Adv = ACNetAdv(name, globalACAdv)
 
+    def work(self):
+        global GLOBAL_RUNNING_R, GLOBAL_EP
+        total_step = 1
+        buffer_s, buffer_a, buffer_r, buffer_a_adv, buffer_r_adv = [], [], [], [], []
+        while not COORD.should_stop() and GLOBAL_EP < MAX_GLOBAL_EP:
+            s = self.env.reset()
+            ep_r = 0
+            for ep_t in range(MAX_EP_STEP):
+                # if self.name == 'W_0':
+                #     self.env.render()
+                a = self.AC.choose_action(s)
+                a_adv = self.AC_Adv.choose_action(s)
+
+                s_, r, done, info = self.env.step(a-a_adv)
+                # s_, r, done, info = self.env.step(a)
+                done = True if ep_t == MAX_EP_STEP - 1 else False
+
+                # print("s:",s,"a:",a,"adv:",a_adv,"r:",r)
+                ep_r += r
+                buffer_s.append(s)
+                buffer_a.append(a)
+                buffer_a_adv.append(a_adv)
+                buffer_r.append((r+8)/8)    # normalize
+                buffer_r_adv.append(-(r+8)/8)    # normalize
+                # print(-(r+8)/8)
+
+                if total_step % UPDATE_GLOBAL_ITER == 0 or done:   # update global and assign to local net
+                    if done:
+                        v_s_ = 0   # terminal
+                        v_s_adv = 0   # terminal
+                    else:
+                        v_s_ = SESS.run(self.AC.v, {self.AC.s: s_[np.newaxis, :]})[0, 0]
+                        v_s_adv = SESS.run(self.AC_Adv.v, {self.AC_Adv.s: s_[np.newaxis, :]})[0, 0]
+
+                    buffer_v_target, buffer_v_target_adv = [], []
+
+                    for r in buffer_r[::-1]:    # reverse buffer r
+                        v_s_ = r + GAMMA * v_s_
+                        buffer_v_target.append(v_s_)
+                    buffer_v_target.reverse()
+
+                    for r in buffer_r_adv[::-1]:    # reverse buffer r
+                        v_s_adv = r + GAMMA * v_s_adv
+                        buffer_v_target_adv.append(v_s_adv)
+                    buffer_v_target_adv.reverse()
+                    
+                    buffer_s, buffer_a, buffer_v_target = np.vstack(buffer_s), np.vstack(buffer_a), np.vstack(buffer_v_target)
+                    buffer_a_adv, buffer_v_target_adv = np.vstack(buffer_a_adv), np.vstack(buffer_v_target_adv)
+
+                    feed_dict = {
+                        self.AC.s: buffer_s,
+                        self.AC.a_his: buffer_a,
+                        self.AC.v_target: buffer_v_target,
+                    }
+
+                    feed_dict_adv = {
+                        self.AC_Adv.s: buffer_s,
+                        self.AC_Adv.a_his: buffer_a_adv,
+                        self.AC_Adv.v_target: buffer_v_target_adv,
+                    }
+
+                    self.AC.update_global(feed_dict)
+                    self.AC_Adv.update_global(feed_dict_adv)
+                    buffer_s, buffer_a, buffer_r, buffer_a_adv, buffer_r_adv = [], [], [], [], []
+                    self.AC.pull_global()
+                    self.AC_Adv.pull_global()
+
+                s = s_
+                total_step += 1
+                if done:
+                    GLOBAL_RUNNING_R.append(ep_r)
+                    GLOBAL_MEAN_R.append(np.mean(GLOBAL_RUNNING_R[-50:]))
+                    print(
+                        self.name,
+                        "Ep:", GLOBAL_EP,
+                        "| Ep_r: %i" % GLOBAL_MEAN_R[-1],
+                          )
+                    GLOBAL_EP += 1
+                    if ep_r > -200:
+                        saver.save(SESS, 'model_adv/double',
+                           global_step=GLOBAL_EP)
+                    break
+
+def showoff(env, global_agent):
+    print ("now showoff result")
+    AC = ACNet('showoff_agent', global_agent)
+    AC.pull_global()
+
+    for episodes in range(5):
+       state = env.reset()
+       reward_all = 0
+       while(True):
+           env.render()
+           raw_input("Press Enter to continue...")
+           action = AC.choose_action(state)
+           state_new, reward, done, _ = env.step(action) # take a random action
+           reward_all = reward_all + reward
+           if done:
+               break
+           state = state_new
+       print ("episode:", episodes, ",reward: ", reward_all)
+
+    reward_all_track = []
+    for episodes in range(30):
+        state = env.reset()
+        reward_all = 0
+        for i in range(1000):
+            action = AC.choose_action(state)
+            state_new, reward, done, _ = env.step(action) # take a random action
+            reward_all = reward_all + reward
+            if done:
+                break
+            state = state_new
+        reward_all_track.append(reward_all)
+    print(reward_all_track)
+    print( "final reward", np.mean(reward_all_track[-100:]))
+    return
 
 if __name__ == "__main__":
     SESS = tf.Session()
@@ -255,17 +311,17 @@ if __name__ == "__main__":
         OPT_A = tf.train.RMSPropOptimizer(LR_A, name='RMSPropA')
         OPT_C = tf.train.RMSPropOptimizer(LR_C, name='RMSPropC')
         GLOBAL_AC = ACNet(GLOBAL_NET_SCOPE)  # we only need its params
+        GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
+        workers = []
+        # Create worker
+        for i in range(N_WORKERS):
+            i_name = 'W_%i' % i   # worker name
+            workers.append(Worker(i_name, GLOBAL_AC,GLOBAL_AC_ADV))
 
     COORD = tf.train.Coordinator()
     saver = tf.train.Saver()
     SESS.run(tf.global_variables_initializer())
-    GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
 
-    saver.restore(SESS, 'model_adv/single-1321')
+    saver.restore(SESS, 'model_adv/double-955')
 
     showoff(env, GLOBAL_AC)
-
-    # plt.plot(np.arange(len(GLOBAL_RUNNING_R)), GLOBAL_RUNNING_R)
-    # plt.xlabel('step')
-    # plt.ylabel('Total moving reward')
-    # plt.show()
