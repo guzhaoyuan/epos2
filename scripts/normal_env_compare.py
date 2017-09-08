@@ -43,6 +43,8 @@ N_Adv_A = 1 #dimension of action space of adversary agent
 ADV_BOUND = [i*0.5 for i in A_BOUND]# the external force for the adv is a little smaller
 print(A_BOUND, ADV_BOUND)
 
+service = 'applyTorque3'
+
 '''
 now able to show both double and single pro as well as load double adv 
 as long as restore the double model first and do not clean using "tf.global_init"
@@ -166,26 +168,82 @@ def showoffReal(global_agent, nonStop = 0):
                 print("done episode, reward:", ep_r)
                 break
 
+def showoffRealAdv(global_agent, global_agent_adv, nonStop = 0):
+    print ("now showoff result")
+    AC = ACNet('showoff_agent', global_agent)
+    AC.pull_global()
+    AC_adv = ACNetAdv('showoff_agent', global_agent)
+    AC_adv.pull_global()
+    for i in range(5):
+        buffer_s, buffer_a, buffer_r = [], [], []
+        step = 0
+        ep_r = 0
+        s = request_init_adv()
+        while(True):
+            step += 1
+
+            a = AC.choose_action(s)
+            a_adv = AC_adv.choose_action(s)
+
+            if nonStop:
+                res = request_torque_adv(1, a, a_adv)
+            else:
+                res = request_torque_adv(step, a, a_adv)
+            print "state:", s, ",action:", a[0], ",\treward:", res.reward
+
+            s_ = np.array(res.state_new)
+            s = s_
+            ep_r += res.reward
+
+            if res.done:
+                res = request_torque_adv(step, 0, 0)
+                print("done episode, reward:", ep_r)
+                break
+
 def request_torque(position, current, init=0):
     # print("wait for Service")
     #asset current in range(-2,2)
-    rospy.wait_for_service('applyTorque')
+    rospy.wait_for_service(service)
     try:
         # print("now request service")
-        applyTorque = rospy.ServiceProxy('applyTorque', Torque)
+        applyTorque = rospy.ServiceProxy(service, Torque)
         # print("request service: ", current)
         res = applyTorque(position, current, init)
         return res
     except rospy.ServiceException as e:
         print("Service call failed: %s"%e)
 
-def request_init():
+def request_torque_adv(position, current, current2, init=0):
     # print("wait for Service")
-    rospy.wait_for_service('applyTorque')
+    #asset current in range(-2,2)
+    rospy.wait_for_service(service)
     try:
         # print("now request service")
-        applyTorque = rospy.ServiceProxy('applyTorque', Torque)
+        applyTorque = rospy.ServiceProxy(service, Torque2)
+        # print("request service: ", current)
+        res = applyTorque(position, current, current2, init)
+        return res
+    except rospy.ServiceException as e:
+        print("Service call failed: %s"%e)
+
+def request_init():
+    # print("wait for Service")
+    rospy.wait_for_service(service)
+    try:
+        # print("now request service")
+        applyTorque = rospy.ServiceProxy(service, Torque)
         res = applyTorque(0, 0, 1)
+        return np.array(res.state_new)
+    except rospy.ServiceException as e:
+        print("Service call failed: %s"%e)
+
+def request_init_adv():
+    # print("wait for Service")
+    rospy.wait_for_service(service)
+    try:
+        # print("now request service")
+        applyTorque = rospy.ServiceProxy(service, Torque2)
+        res = applyTorque(0, 0, 0, 1)
         return np.array(res.state_new)
     except rospy.ServiceException as e:
         print("Service call failed: %s"%e)
@@ -353,14 +411,15 @@ if __name__ == "__main__":
     GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
     SESS.run(tf.global_variables_initializer())
 
-    saver.restore(SESS, 'model_adv/double-3140')
+    saver.restore(SESS, 'model_adv/double-2489')
     # showoff(env, GLOBAL_AC,1)   
-    showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 1)
+    # showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 1)
 
 
-    saver.restore(SESS, 'model_adv/single-1322')
+    # saver.restore(SESS, 'model_adv/single-1322')
     # showoff(env, GLOBAL_AC,0)
-    showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 0)
+    # showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 0)
 #####################
 
     # showoffReal(GLOBAL_AC,1)
+    showoffRealAdv(GLOBAL_AC, GLOBAL_AC_ADV)

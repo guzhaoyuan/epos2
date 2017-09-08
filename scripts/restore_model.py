@@ -32,7 +32,7 @@ N_S = env.observation_space.shape[0]
 N_A = env.action_space.shape[0]
 A_BOUND = [env.action_space.low, env.action_space.high]
 
-service = 'applyTorque'
+service = 'applyTorque2'
 
 def request_torque(position, current, init=0):
     # print("wait for Service")
@@ -243,7 +243,7 @@ def showoff(env, global_agent):
     print( "final reward", np.mean(reward_all_track[-100:]))
     return
 
-def showoffReal(global_agent, nonStop = 0):
+def showoffReal(global_agent):
     print ("now showoff result")
     AC = ACNet('showoff_agent', global_agent)
     AC.pull_global()
@@ -256,12 +256,10 @@ def showoffReal(global_agent, nonStop = 0):
             step += 1
 
             a = AC.choose_action(s)
-            if nonStop:
-                res = request_torque(1, a)
-            else:
-                res = request_torque(step, a)
+            res = request_torque(step, a)
             print "state:", s, ",action:", a[0], ",\treward:", res.reward
-
+            # res = request_torque(step, env.random_action()[0]*4-2)
+            # res = request_torque(step, 0)
             s_ = np.array(res.state_new)
             s = s_
             ep_r += res.reward
@@ -271,7 +269,6 @@ def showoffReal(global_agent, nonStop = 0):
                 print("done episode, reward:", ep_r)
                 break
 
-
 if __name__ == "__main__":
     SESS = tf.Session()
 
@@ -279,11 +276,6 @@ if __name__ == "__main__":
         OPT_A = tf.train.RMSPropOptimizer(LR_A, name='RMSPropA')
         OPT_C = tf.train.RMSPropOptimizer(LR_C, name='RMSPropC')
         GLOBAL_AC = ACNet(GLOBAL_NET_SCOPE)  # we only need its params
-        workers = []
-        # Create worker
-        for i in range(N_WORKERS):
-            i_name = 'W_%i' % i   # worker name
-            workers.append(Worker(i_name, GLOBAL_AC))
 
     COORD = tf.train.Coordinator()
     saver = tf.train.Saver()
@@ -292,4 +284,4 @@ if __name__ == "__main__":
     saver.restore(SESS, 'model/ckpt-73')
 
     # showoff(env, GLOBAL_AC)
-    showoffReal(GLOBAL_AC, 1)
+    showoffReal(GLOBAL_AC)

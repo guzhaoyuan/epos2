@@ -35,7 +35,7 @@
 
 ros::Time begin;
 // ros::Duration interval(1.0); // 1s
-ros::Duration interval(0,33000000); // 0s,33ms
+ros::Duration interval(0,20000000); // 0s,33ms
 ros::Time next;
 
 int position_old, position_new; // for calc velocity
@@ -143,7 +143,7 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 	    // torque = req.torque;
 	    torque = min(CURRENT_MAX,max(CURRENT_MIN, torque)); // soft limit torque
 		reward = -(angle_old*angle_old + 0.01*pVelocityIs_old*pVelocityIs_old + 0.001*req.torque*req.torque);
-		cout<<position_old<<",\t"<<angle_old<<",\t"<<pVelocityIs_old<<",\t"<<req.torque<<",\t"<<reward<<endl;
+		// cout<<position_old<<",\t"<<angle_old<<",\t"<<pVelocityIs_old<<",\t"<<req.torque<<",\t"<<reward<<endl;
 
 		// res.current = current;
 		// res.position_new = position_new;
@@ -160,15 +160,24 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 		// the force transform of the data type can cause problem
 		while((next - ros::Time::now()).toSec()<0){
 			next += interval;
-			// ROS_INFO("");
+			ROS_INFO("");
 		}
 		(next - ros::Time::now()).sleep();
 
+		// if((next - ros::Time::now()).toSec()<0){
+		// 	next += interval;
+		// 	ROS_INFO("");
+		// }
+		// if((next - ros::Time::now()).toSec()<0){
+
+		// }
+		// (next - ros::Time::now()).sleep();
+
 		// use position as step
-		// ROS_INFO("now write: step=%ld, torque=%f", (long int)req.position, TORQUE_AMP*torque);
+		ROS_INFO("now write: step=%ld, torque=%f", (long int)req.position, TORQUE_AMP*torque);
 		SetCurrentMust(g_pKeyHandle, g_usNodeId, TORQUE_AMP*torque, &ulErrorCode);
 
-		// ROS_INFO("now return");
+		ROS_INFO("now return");
 	}
 	return true;
 }

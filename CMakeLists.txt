@@ -57,7 +57,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate services in the 'srv' folder
 add_service_files(
 	FILES
-	Torque.srv
+  Torque.srv
+	Torque2.srv
   Position.srv
   Velocity.srv
   Current.srv

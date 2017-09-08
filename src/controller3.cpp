@@ -7,7 +7,7 @@
 */
 #include "ros/ros.h"
 #include <signal.h>
-#include "epos2/Torque.h" // service file
+#include "epos2/Torque2.h" // service file
 
 #include "wrap.h" // the head of epos control functions
 
@@ -39,10 +39,10 @@ ros::Duration interval(0,33000000); // 0s,33ms
 ros::Time next;
 
 int position_old, position_new; // for calc velocity
-float angle_old, angle_new, pVelocityIs, pVelocityIs_old, reward, torque;
+float angle_old, angle_new, pVelocityIs, pVelocityIs_old, reward, torque, torque2;
 short current;
 
-int random_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
+int random_init(epos2::Torque2::Request &req, epos2::Torque2::Response &res){
 	// need to update angle while random init
 	// wait until position do not change
 	int position_tmp = 0, velocity_tmp = 0, delta = 1;
@@ -70,7 +70,7 @@ int random_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 	return true;
 }
 
-int down_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
+int down_init(epos2::Torque2::Request &req, epos2::Torque2::Response &res){
 	// need to update angle while random init
 	// wait until position do not change
 	int delta = 1, position_tmp, position_tmp_old = 0;
@@ -88,7 +88,7 @@ int down_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 	return true;
 }
 
-int zero_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
+int zero_init(epos2::Torque2::Request &req, epos2::Torque2::Response &res){
 	// need to update angle while random init
 	// wait until position do not change
 	int position_tmp = 1;
@@ -108,7 +108,7 @@ int zero_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 	return true;
 }
 
-bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
+bool applyTorque(epos2::Torque2::Request &req, epos2::Torque2::Response &res)
 {
 	if(req.init == 1){
 		random_init(req, res);
@@ -142,6 +142,8 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 	    //calc reward
 	    // torque = req.torque;
 	    torque = min(CURRENT_MAX,max(CURRENT_MIN, torque)); // soft limit torque
+	    torque2 = req.torque2;
+	    torque2 = min(CURRENT_MAX,max(CURRENT_MIN, torque2)); // soft limit torque
 		reward = -(angle_old*angle_old + 0.01*pVelocityIs_old*pVelocityIs_old + 0.001*req.torque*req.torque);
 		cout<<position_old<<",\t"<<angle_old<<",\t"<<pVelocityIs_old<<",\t"<<req.torque<<",\t"<<reward<<endl;
 
@@ -160,14 +162,26 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 		// the force transform of the data type can cause problem
 		while((next - ros::Time::now()).toSec()<0){
 			next += interval;
-			// ROS_INFO("");
+			ROS_INFO("");
 		}
 		(next - ros::Time::now()).sleep();
+
+		// if((next - ros::Time::now()).toSec()<0){
+		// 	next += interval;
+		// 	if((next - ros::Time::now()).toSec()<0){
+		// 		next = 
+		// 	}
+		// }
+		// (next - ros::Time::now()).sleep();
+
+
+
+
 
 		// use position as step
 		// ROS_INFO("now write: step=%ld, torque=%f", (long int)req.position, TORQUE_AMP*torque);
 		SetCurrentMust(g_pKeyHandle, g_usNodeId, TORQUE_AMP*torque, &ulErrorCode);
-
+		SetCurrentMust(g_pKeyHandle2, g_usNodeId2, TORQUE_AMP*torque2, &ulErrorCode);
 		// ROS_INFO("now return");
 	}
 	return true;
@@ -205,6 +219,9 @@ int main(int argc, char **argv)
 		LogError("OpenDevice", lResult, ulErrorCode);
 		return lResult;
 	}
+	// node 1 for pro, node 2 for adv
+
+
 	// clear fault
 	VCS_ClearFault(g_pKeyHandle, g_usNodeId, &ulErrorCode); 
 	VCS_ClearFault(g_pKeyHandle2, g_usNodeId2, &ulErrorCode); 
@@ -225,6 +242,11 @@ int main(int argc, char **argv)
 	SetDisableState(g_pKeyHandle2, g_usNodeId2, &ulErrorCode);
 	//close device
 	if((lResult = CloseDevice(&ulErrorCode))!=MMC_SUCCESS)
+	{
+		LogError("CloseDevice", lResult, ulErrorCode);
+		return lResult;
+	}
+	if((lResult = CloseDevice2(&ulErrorCode))!=MMC_SUCCESS)
 	{
 		LogError("CloseDevice", lResult, ulErrorCode);
 		return lResult;
