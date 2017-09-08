@@ -32,13 +32,15 @@ N_S = env.observation_space.shape[0]
 N_A = env.action_space.shape[0]
 A_BOUND = [env.action_space.low, env.action_space.high]
 
+service = 'applyTorque'
+
 def request_torque(position, current, init=0):
     # print("wait for Service")
     #asset current in range(-2,2)
-    rospy.wait_for_service('applyTorque')
+    rospy.wait_for_service(service)
     try:
         # print("now request service")
-        applyTorque = rospy.ServiceProxy('applyTorque', Torque)
+        applyTorque = rospy.ServiceProxy(service, Torque)
         # print("request service: ", current)
         res = applyTorque(position, current, init)
         return res
@@ -47,10 +49,10 @@ def request_torque(position, current, init=0):
 
 def request_init():
     # print("wait for Service")
-    rospy.wait_for_service('applyTorque')
+    rospy.wait_for_service(service)
     try:
         # print("now request service")
-        applyTorque = rospy.ServiceProxy('applyTorque', Torque)
+        applyTorque = rospy.ServiceProxy(service, Torque)
         res = applyTorque(0, 0, 1)
         return np.array(res.state_new)
     except rospy.ServiceException as e:
@@ -241,7 +243,7 @@ def showoff(env, global_agent):
     print( "final reward", np.mean(reward_all_track[-100:]))
     return
 
-def showoffReal(global_agent):
+def showoffReal(global_agent, nonStop = 0):
     print ("now showoff result")
     AC = ACNet('showoff_agent', global_agent)
     AC.pull_global()
@@ -254,10 +256,12 @@ def showoffReal(global_agent):
             step += 1
 
             a = AC.choose_action(s)
-            res = request_torque(step, a)
+            if nonStop:
+                res = request_torque(1, a)
+            else:
+                res = request_torque(step, a)
             print "state:", s, ",action:", a[0], ",\treward:", res.reward
-            # res = request_torque(step, env.random_action()[0]*4-2)
-            # res = request_torque(step, 0)
+
             s_ = np.array(res.state_new)
             s = s_
             ep_r += res.reward
@@ -266,6 +270,7 @@ def showoffReal(global_agent):
                 res = request_torque(step, 0)
                 print("done episode, reward:", ep_r)
                 break
+
 
 if __name__ == "__main__":
     SESS = tf.Session()
@@ -286,5 +291,5 @@ if __name__ == "__main__":
 
     saver.restore(SESS, 'model/ckpt-73')
 
-    showoff(env, GLOBAL_AC)
-    # showoffReal(GLOBAL_AC)
+    # showoff(env, GLOBAL_AC)
+    showoffReal(GLOBAL_AC, 1)

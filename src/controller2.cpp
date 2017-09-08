@@ -49,8 +49,8 @@ int random_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 	float angle_new;
 	unsigned int ulErrorCode = 0;
 	while(delta != 0 && ros::ok()){
-		get_position(g_pKeyHandle, g_usNodeId, &position_tmp, &ulErrorCode);
-		get_velocity(g_pKeyHandle, g_usNodeId, &velocity_tmp, &ulErrorCode);
+		get_position(g_pKeyHandle2, g_usNodeId2, &position_tmp, &ulErrorCode);
+		get_velocity(g_pKeyHandle2, g_usNodeId2, &velocity_tmp, &ulErrorCode);
 		angle_new = (float)((position_new+position_offset) % pulse_per_round)/pulse_per_round*2*PI;
 		if(angle_new > PI){
 			angle_new -= 2*PI; // angle range (-PI , PI]
@@ -76,7 +76,7 @@ int down_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 	int delta = 1, position_tmp, position_tmp_old = 0;
 	unsigned int ulErrorCode = 0;
 	while(delta != 0 && ros::ok()){
-		get_position(g_pKeyHandle, g_usNodeId, &position_tmp, &ulErrorCode);
+		get_position(g_pKeyHandle2, g_usNodeId2, &position_tmp, &ulErrorCode);
 		delta = position_tmp - position_tmp_old;
 		position_tmp_old = position_tmp;
 		ros::Duration(0.2).sleep();// sleep for 0.1s then compare position again
@@ -94,13 +94,13 @@ int zero_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 	int position_tmp = 1;
 	unsigned int ulErrorCode = 0;
 
-	ActivateProfilePositionMode(g_pKeyHandle, g_usNodeId, &ulErrorCode);
-	MoveToPosition(g_pKeyHandle, g_usNodeId, 0, 1, &ulErrorCode);
+	ActivateProfilePositionMode(g_pKeyHandle2, g_usNodeId2, &ulErrorCode);
+	MoveToPosition(g_pKeyHandle2, g_usNodeId2, 0, 1, &ulErrorCode);
 	while(position_tmp != 0 && ros::ok()){
-		get_position(g_pKeyHandle, g_usNodeId, &position_tmp, &ulErrorCode);
+		get_position(g_pKeyHandle2, g_usNodeId2, &position_tmp, &ulErrorCode);
 		ros::Duration(0.5).sleep();// sleep for 0.5s then compare position again
 	}
-	ActivateProfileCurrentMode(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	ActivateProfileCurrentMode(g_pKeyHandle2, g_usNodeId2, &ulErrorCode);
 	// when move back to zero position, record position and set position offset
 	float angle = PI;
 	res.state_new[0] = cos(angle);res.state_new[1] = sin(angle);res.state_new[2] = 0;
@@ -118,10 +118,10 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 
 
 		// ROS_INFO("now read position n current");
-		get_position(g_pKeyHandle, g_usNodeId, &position_new, &ulErrorCode);
+		get_position(g_pKeyHandle2, g_usNodeId2, &position_new, &ulErrorCode);
 
-		// get_current(g_pKeyHandle, g_usNodeId, &current, &ulErrorCode);
-		// get_velocity(g_pKeyHandle, g_usNodeId, &pVelocityIs, &ulErrorCode);
+		// get_current(g_pKeyHandle2, g_usNodeId2, &current, &ulErrorCode);
+		// get_velocity(g_pKeyHandle2, g_usNodeId2, &pVelocityIs, &ulErrorCode);
 		
 		//calc velocity before angle, using continuous position n angle, rad/s
 		pVelocityIs = (float)(position_new - position_old)/pulse_per_round*2*PI/interval.toSec();
@@ -166,7 +166,7 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 
 		// use position as step
 		// ROS_INFO("now write: step=%ld, torque=%f", (long int)req.position, TORQUE_AMP*torque);
-		SetCurrentMust(g_pKeyHandle, g_usNodeId, TORQUE_AMP*torque, &ulErrorCode);
+		SetCurrentMust(g_pKeyHandle2, g_usNodeId2, TORQUE_AMP*torque, &ulErrorCode);
 
 		// ROS_INFO("now return");
 	}
@@ -185,7 +185,7 @@ void mySigintHandler(int sig)
 
 int main(int argc, char **argv)
 {
-	ros::init(argc, argv, "epos2_controller");
+	ros::init(argc, argv, "epos2_controller2");
 	ros::NodeHandle n;
 
 	begin = ros::Time::now();
@@ -195,22 +195,17 @@ int main(int argc, char **argv)
 	// Set parameter for usb IO operation
 	SetDefaultParameters();
 	// open device
-	if((lResult = OpenDevice(&ulErrorCode))!=MMC_SUCCESS)
+	if((lResult = OpenDevice2(&ulErrorCode))!=MMC_SUCCESS)
 	{
 		LogError("OpenDevice", lResult, ulErrorCode);
 		return lResult;
 	}
-	// if((lResult = OpenDevice2(&ulErrorCode))!=MMC_SUCCESS)
-	// {
-	// 	LogError("OpenDevice", lResult, ulErrorCode);
-	// 	return lResult;
-	// }
 	// clear fault
-	VCS_ClearFault(g_pKeyHandle, g_usNodeId, &ulErrorCode); 
-	SetEnableState(g_pKeyHandle, g_usNodeId, &ulErrorCode);
-	ActivateProfileCurrentMode(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	VCS_ClearFault(g_pKeyHandle2, g_usNodeId2, &ulErrorCode); 
+	SetEnableState(g_pKeyHandle2, g_usNodeId2, &ulErrorCode);
+	ActivateProfileCurrentMode(g_pKeyHandle2, g_usNodeId2, &ulErrorCode);
 
-	ros::ServiceServer service = n.advertiseService("applyTorque", applyTorque);
+	ros::ServiceServer service = n.advertiseService("applyTorque2", applyTorque);
 
 	signal(SIGINT, mySigintHandler);
 
@@ -218,9 +213,9 @@ int main(int argc, char **argv)
 	ros::spin();
 
 	//disable epos
-	SetDisableState(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	SetDisableState(g_pKeyHandle2, g_usNodeId2, &ulErrorCode);
 	//close device
-	if((lResult = CloseDevice(&ulErrorCode))!=MMC_SUCCESS)
+	if((lResult = CloseDevice2(&ulErrorCode))!=MMC_SUCCESS)
 	{
 		LogError("CloseDevice", lResult, ulErrorCode);
 		return lResult;

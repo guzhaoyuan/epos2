@@ -29,12 +29,14 @@ using namespace std;
 	#define MMC_MAX_LOG_MSG_SIZE 512
 #endif
 
-extern void* g_pKeyHandle ;
-extern unsigned short g_usNodeId ;
+extern void* g_pKeyHandle;
+extern void* g_pKeyHandle2;
+extern unsigned short g_usNodeId, g_usNodeId2;
 extern string g_deviceName;
 extern string g_protocolStackName;
 extern string g_interfaceName;
 extern string g_portName;
+extern string g_portName2;
 extern int g_baudrate ;
 
 typedef void* HANDLE;
@@ -44,9 +46,11 @@ void LogInfo(string message);
 void LogError(string functionName, int p_lResult, unsigned int p_ulErrorCode);
 
 int OpenDevice(unsigned int* p_pErrorCode);
+int OpenDevice2(unsigned int* p_pErrorCode);
 int SetEnableState(void* g_pKeyHandle, unsigned short g_usNodeId, unsigned int* p_pErrorCode);
 int SetDisableState(void* g_pKeyHandle, unsigned short g_usNodeId, unsigned int* pErrorCode);
 int CloseDevice(unsigned int* p_pErrorCode);// if not close epos, it will keep at position or velocity
+int CloseDevice2(unsigned int* p_pErrorCode);
 
 int ActivateProfilePositionMode(HANDLE p_DeviceHandle, unsigned short p_usNodeId, unsigned int* p_rlErrorCode);
 int ActivateProfileVelocityMode(HANDLE p_DeviceHandle, unsigned short p_usNodeId, unsigned int* p_rlErrorCode);

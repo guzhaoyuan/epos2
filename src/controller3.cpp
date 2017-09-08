@@ -185,7 +185,7 @@ void mySigintHandler(int sig)
 
 int main(int argc, char **argv)
 {
-	ros::init(argc, argv, "epos2_controller");
+	ros::init(argc, argv, "epos2_controller3");
 	ros::NodeHandle n;
 
 	begin = ros::Time::now();
@@ -200,17 +200,20 @@ int main(int argc, char **argv)
 		LogError("OpenDevice", lResult, ulErrorCode);
 		return lResult;
 	}
-	// if((lResult = OpenDevice2(&ulErrorCode))!=MMC_SUCCESS)
-	// {
-	// 	LogError("OpenDevice", lResult, ulErrorCode);
-	// 	return lResult;
-	// }
+	if((lResult = OpenDevice2(&ulErrorCode))!=MMC_SUCCESS)
+	{
+		LogError("OpenDevice", lResult, ulErrorCode);
+		return lResult;
+	}
 	// clear fault
 	VCS_ClearFault(g_pKeyHandle, g_usNodeId, &ulErrorCode); 
+	VCS_ClearFault(g_pKeyHandle2, g_usNodeId2, &ulErrorCode); 
 	SetEnableState(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	SetEnableState(g_pKeyHandle2, g_usNodeId2, &ulErrorCode);
 	ActivateProfileCurrentMode(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	ActivateProfileCurrentMode(g_pKeyHandle2, g_usNodeId2, &ulErrorCode);
 
-	ros::ServiceServer service = n.advertiseService("applyTorque", applyTorque);
+	ros::ServiceServer service = n.advertiseService("applyTorque3", applyTorque);
 
 	signal(SIGINT, mySigintHandler);
 
@@ -219,6 +222,7 @@ int main(int argc, char **argv)
 
 	//disable epos
 	SetDisableState(g_pKeyHandle, g_usNodeId, &ulErrorCode);
+	SetDisableState(g_pKeyHandle2, g_usNodeId2, &ulErrorCode);
 	//close device
 	if((lResult = CloseDevice(&ulErrorCode))!=MMC_SUCCESS)
 	{

@@ -1,11 +1,13 @@
 #include "wrap.h"
 
-void* g_pKeyHandle ;
-unsigned short g_usNodeId ;
+void* g_pKeyHandle;
+void* g_pKeyHandle2;
+unsigned short g_usNodeId, g_usNodeId2 ;
 string g_deviceName;
 string g_protocolStackName;
 string g_interfaceName;
 string g_portName;
+string g_portName2;
 int g_baudrate ;
 
 void LogError(string functionName, int p_lResult, unsigned int p_ulErrorCode)
@@ -16,6 +18,20 @@ void LogError(string functionName, int p_lResult, unsigned int p_ulErrorCode)
 void LogInfo(string message)
 {
 	cout << message << endl;
+}
+
+void SetDefaultParameters()
+{
+	//USB
+	g_usNodeId = 1;
+	g_usNodeId2 = 2;
+	g_deviceName = "EPOS2"; //EPOS version
+	g_protocolStackName = "MAXON SERIAL V2"; //MAXON_RS232
+	g_interfaceName = "USB"; //RS232
+	// g_portName = "bus/usb/001/015"; // /dev/ttyS1
+	g_portName = "USB0"; // /dev/ttyS1
+	g_portName2 = "USB1";
+	g_baudrate = 1000000; //115200
 }
 
 int OpenDevice(unsigned int* p_pErrorCode)
@@ -58,6 +74,56 @@ int OpenDevice(unsigned int* p_pErrorCode)
 	else
 	{
 		g_pKeyHandle = 0;
+	}
+
+	delete []pDeviceName;
+	delete []pProtocolStackName;
+	delete []pInterfaceName;
+	delete []pPortName;
+
+	return lResult;
+}
+
+int OpenDevice2(unsigned int* p_pErrorCode)
+{
+	int lResult = MMC_FAILED;
+
+	char* pDeviceName = new char[255];
+	char* pProtocolStackName = new char[255];
+	char* pInterfaceName = new char[255];
+	char* pPortName = new char[255];
+
+	strcpy(pDeviceName, g_deviceName.c_str());
+	strcpy(pProtocolStackName, g_protocolStackName.c_str());
+	strcpy(pInterfaceName, g_interfaceName.c_str());
+	strcpy(pPortName, g_portName2.c_str());
+
+	LogInfo("Open device2...");
+
+	g_pKeyHandle2 = VCS_OpenDevice(pDeviceName, pProtocolStackName, pInterfaceName, pPortName, p_pErrorCode);
+
+	if(g_pKeyHandle2!=0 && *p_pErrorCode == 0)
+	{
+		unsigned int lBaudrate = 0;
+		unsigned int lTimeout = 0;
+
+		if(VCS_GetProtocolStackSettings(g_pKeyHandle2, &lBaudrate, &lTimeout, p_pErrorCode)!=0)
+		{
+			if(VCS_SetProtocolStackSettings(g_pKeyHandle2, g_baudrate, lTimeout, p_pErrorCode)!=0)
+			{
+				if(VCS_GetProtocolStackSettings(g_pKeyHandle2, &lBaudrate, &lTimeout, p_pErrorCode)!=0)
+				{
+					if(g_baudrate==(int)lBaudrate)
+					{
+						lResult = MMC_SUCCESS;
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		g_pKeyHandle2 = 0;
 	}
 
 	delete []pDeviceName;
@@ -150,6 +216,22 @@ int CloseDevice(unsigned int* p_pErrorCode)
 	return lResult;
 }
 
+int CloseDevice2(unsigned int* p_pErrorCode)
+{
+	int lResult = MMC_FAILED;
+
+	*p_pErrorCode = 0;
+
+	LogInfo("Close device");
+
+	if(VCS_CloseDevice(g_pKeyHandle2, p_pErrorCode)!=0 && *p_pErrorCode == 0)
+	{
+		lResult = MMC_SUCCESS;
+	}
+
+	return lResult;
+}
+
 int ActivateProfilePositionMode(HANDLE p_DeviceHandle, unsigned short p_usNodeId, unsigned int* p_rlErrorCode)
 {
 	int lResult = MMC_SUCCESS;
@@ -196,18 +278,6 @@ int ActivateProfileCurrentMode(HANDLE p_DeviceHandle, unsigned short p_usNodeId,
 		lResult = MMC_FAILED;
 	}
 	return  lResult;
-}
-
-void SetDefaultParameters()
-{
-	//USB
-	g_usNodeId = 1;
-	g_deviceName = "EPOS2"; //EPOS version
-	g_protocolStackName = "MAXON SERIAL V2"; //MAXON_RS232
-	g_interfaceName = "USB"; //RS232
-	// g_portName = "bus/usb/001/015"; // /dev/ttyS1
-	g_portName = "USB0"; // /dev/ttyS1
-	g_baudrate = 1000000; //115200
 }
 
 int get_position(HANDLE p_DeviceHandle, unsigned short p_usNodeId, int* pPositionIs, unsigned int* p_pErrorCode)

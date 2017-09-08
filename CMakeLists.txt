@@ -138,6 +138,8 @@ message(${catkin_INCLUDE_DIRS})
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(controller src/controller.cpp src/wrap.cpp)
+add_executable(controller2 src/controller2.cpp src/wrap.cpp)
+add_executable(controller3 src/controller3.cpp src/wrap.cpp)
 add_executable(position_server src/position_server.cpp src/wrap.cpp)
 add_executable(velocity_server src/velocity_server.cpp src/wrap.cpp)
 add_executable(current_server src/current_server.cpp src/wrap.cpp)
@@ -162,6 +164,14 @@ add_dependencies(test_epos2 epos2_gencpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(controller
+  ${catkin_LIBRARIES}
+  EposCmd
+)
+target_link_libraries(controller2
+  ${catkin_LIBRARIES}
+  EposCmd
+)
+target_link_libraries(controller3
   ${catkin_LIBRARIES}
   EposCmd
 )
