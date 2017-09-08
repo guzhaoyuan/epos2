@@ -39,19 +39,27 @@ A_BOUND = [env.action_space.low, env.action_space.high]
 
 N_Adv_A = 1 #dimension of action space of adversary agent
 ADV_BOUND = [i*0.05 for i in A_BOUND]# the external force for the adv is a little smaller
+print(A_BOUND, ADV_BOUND)
 
+def showoff(env, global_agent, isDouble, inspect=0):
+    if isDouble:
+        print ("now showoff adv result")
+        AC = ACNet('showoff_agent_adv', global_agent)
+        AC.pull_global()
+    else:
+        print ("now showoff result")
+        AC = ACNet('showoff_agent', global_agent)
+        AC.pull_global()
 
-def showoff(env, global_agent):
-    print ("now showoff result")
-    AC = ACNet('showoff_agent', global_agent)
-    AC.pull_global()
-
-    for episodes in range(5):
+    for episodes in range(1):
        state = env.reset()
        reward_all = 0
        while(True):
            env.render()
            action = AC.choose_action(state)
+           # print(action)
+           if inspect != 0:
+               raw_input("Press Enter to continue...")
            state_new, reward, done, _ = env.step(action) # take a random action
            reward_all = reward_all + reward
            if done:
@@ -255,17 +263,16 @@ if __name__ == "__main__":
         OPT_A = tf.train.RMSPropOptimizer(LR_A, name='RMSPropA')
         OPT_C = tf.train.RMSPropOptimizer(LR_C, name='RMSPropC')
         GLOBAL_AC = ACNet(GLOBAL_NET_SCOPE)  # we only need its params
+        # GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
 
     COORD = tf.train.Coordinator()
     saver = tf.train.Saver()
+
     SESS.run(tf.global_variables_initializer())
+    saver.restore(SESS, 'model_adv/single-1322')
+    showoff(env, GLOBAL_AC,0)
+
     GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
-
-    saver.restore(SESS, 'model_adv/single-1321')
-
-    showoff(env, GLOBAL_AC)
-
-    # plt.plot(np.arange(len(GLOBAL_RUNNING_R)), GLOBAL_RUNNING_R)
-    # plt.xlabel('step')
-    # plt.ylabel('Total moving reward')
-    # plt.show()
+    SESS.run(tf.global_variables_initializer())
+    saver.restore(SESS, 'model_adv/double-1936')
+    showoff(env, GLOBAL_AC,1)   
