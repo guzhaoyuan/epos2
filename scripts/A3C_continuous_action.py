@@ -22,6 +22,7 @@ GAMMA = 0.9
 ENTROPY_BETA = 0.01
 LR_A = 0.0001    # learning rate for actor
 LR_C = 0.001    # learning rate for critic
+GLOBAL_MEAN_R = []
 GLOBAL_RUNNING_R = []
 GLOBAL_EP = 0
 
@@ -150,20 +151,20 @@ class Worker(object):
                 s = s_
                 total_step += 1
                 if done:
-                    if len(GLOBAL_RUNNING_R) == 0:  # record running episode reward
-                        GLOBAL_RUNNING_R.append(ep_r)
-                    else:
-                        GLOBAL_RUNNING_R.append(0.9 * GLOBAL_RUNNING_R[-1] + 0.1 * ep_r)
+                    GLOBAL_RUNNING_R.append(ep_r)
+                    GLOBAL_MEAN_R.append(np.mean(GLOBAL_RUNNING_R[-50:]))
                     print(
                         self.name,
                         "Ep:", GLOBAL_EP,
-                        "| Ep_r: %i" % GLOBAL_RUNNING_R[-1],
+                        "| Ep_r: %i" % GLOBAL_MEAN_R[-1],
                           )
                     GLOBAL_EP += 1
-                    if GLOBAL_RUNNING_R[-1] > MAX_R:
-                        saver.save(SESS, 'model_adv/single', global_step=GLOBAL_EP)
-                        MAX_R = GLOBAL_RUNNING_R[-1]
+                    if GLOBAL_MEAN_R[-1] > MAX_R:
+                        # saver.save(SESS, 'model_adv/double',global_step=GLOBAL_EP)
+                        print("save episode:", GLOBAL_EP)
+                        MAX_R = GLOBAL_MEAN_R[-1]
                     break
+
 
 if __name__ == "__main__":
     SESS = tf.Session()

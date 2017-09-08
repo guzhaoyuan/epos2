@@ -15,16 +15,18 @@ import gym
 import os
 import shutil
 import matplotlib.pyplot as plt
+from epos2.srv import *
+import rospy
 
 GAME = 'Pendulum-v0'
 OUTPUT_GRAPH = True
 LOG_DIR = './log'
-N_WORKERS = multiprocessing.cpu_count()
+N_WORKERS = 4#multiprocessing.cpu_count()
 MAX_EP_STEP = 200
-MAX_GLOBAL_EP = 2000
+MAX_GLOBAL_EP = 4000
 GLOBAL_NET_SCOPE = 'Global_Net'
 UPDATE_GLOBAL_ITER = 10
-GAMMA = 0.9
+GAMMA = 0.6
 ENTROPY_BETA = 0.01
 LR_A = 0.0001    # learning rate for actor
 LR_C = 0.001    # learning rate for critic
@@ -38,17 +40,21 @@ N_A = env.action_space.shape[0]
 A_BOUND = [env.action_space.low, env.action_space.high]
 
 N_Adv_A = 1 #dimension of action space of adversary agent
-ADV_BOUND = [i*0.05 for i in A_BOUND]# the external force for the adv is a little smaller
+ADV_BOUND = [i*0.5 for i in A_BOUND]# the external force for the adv is a little smaller
 print(A_BOUND, ADV_BOUND)
 
+'''
+now able to show both double and single pro as well as load double adv 
+as long as restore the double model first and do not clean using "tf.global_init"
+'''
 def showoff(env, global_agent, isDouble, inspect=0):
     if isDouble:
         print ("now showoff adv result")
-        AC = ACNet('showoff_agent_adv', global_agent)
+        AC = ACNet('showoff_double', global_agent)
         AC.pull_global()
     else:
         print ("now showoff result")
-        AC = ACNet('showoff_agent', global_agent)
+        AC = ACNet('showoff_single', global_agent)
         AC.pull_global()
 
     for episodes in range(1):
@@ -60,7 +66,7 @@ def showoff(env, global_agent, isDouble, inspect=0):
            # print(action)
            if inspect != 0:
                raw_input("Press Enter to continue...")
-           state_new, reward, done, _ = env.step(action) # take a random action
+           state_new, reward, done, _ = env.step(action)
            reward_all = reward_all + reward
            if done:
                break
@@ -73,17 +79,66 @@ def showoff(env, global_agent, isDouble, inspect=0):
         reward_all = 0
         for i in range(1000):
             action = AC.choose_action(state)
-            state_new, reward, done, _ = env.step(action) # take a random action
+            state_new, reward, done, _ = env.step(action) 
             reward_all = reward_all + reward
             if done:
                 break
             state = state_new
         reward_all_track.append(reward_all)
-    print(reward_all_track)
+    # print(reward_all_track)
+    print( "final reward", np.mean(reward_all_track[-100:]))
+    return
+'''
+this function is able to show double and single pro in the adv env
+'''
+def showoff_in_Adv(env, global_agent, globalAC_adv, isDouble, inspect=0):
+    if isDouble:
+        print ("now showoff double in env-adv")
+        AC = ACNet('showoff_double', global_agent)
+        AC.pull_global()
+        AC_adv = ACNetAdv('showoff_double_adv', globalAC_adv)
+        AC_adv.pull_global()
+    else:
+        print ("now showoff single in env-adv")
+        AC = ACNet('showoff_single', global_agent)
+        AC.pull_global()
+        AC_adv = ACNetAdv('showoff_single_adv', globalAC_adv)
+        AC_adv.pull_global()
+
+    for episodes in range(1):
+        state = env.reset()
+        reward_all = 0
+        for i in range(200):
+            env.render()
+            action = AC.choose_action(state)
+            action_adv = AC_adv.choose_action(state)
+            state_new, reward, done, _ = env.step(action-action_adv)
+            reward_all = reward_all + reward
+            if done:
+                break
+            state = state_new
+        print ("episode:", episodes, ",reward: ", reward_all)
+    reward_all_track = []
+    for episodes in range(20):
+        state = env.reset()
+        reward_all = 0
+        for i in range(1000):
+            action = AC.choose_action(state)
+            action_adv = AC_adv.choose_action(state)
+            state_new, reward, done, _ = env.step(action-action_adv)
+            reward_all = reward_all + reward
+            if done:
+                break
+            state = state_new
+        reward_all_track.append(reward_all)
+    # print(reward_all_track)
     print( "final reward", np.mean(reward_all_track[-100:]))
     return
 
-def showoffReal(global_agent):
+'''
+this can only showoff single and double pro in real model for now
+'''
+def showoffReal(global_agent, nonStop = 0):
     print ("now showoff result")
     AC = ACNet('showoff_agent', global_agent)
     AC.pull_global()
@@ -96,10 +151,12 @@ def showoffReal(global_agent):
             step += 1
 
             a = AC.choose_action(s)
-            res = request_torque(step, a)
+            if nonStop:
+                res = request_torque(1, a)
+            else:
+                res = request_torque(step, a)
             print "state:", s, ",action:", a[0], ",\treward:", res.reward
-            # res = request_torque(step, env.random_action()[0]*4-2)
-            # res = request_torque(step, 0)
+
             s_ = np.array(res.state_new)
             s = s_
             ep_r += res.reward
@@ -109,6 +166,29 @@ def showoffReal(global_agent):
                 print("done episode, reward:", ep_r)
                 break
 
+def request_torque(position, current, init=0):
+    # print("wait for Service")
+    #asset current in range(-2,2)
+    rospy.wait_for_service('applyTorque')
+    try:
+        # print("now request service")
+        applyTorque = rospy.ServiceProxy('applyTorque', Torque)
+        # print("request service: ", current)
+        res = applyTorque(position, current, init)
+        return res
+    except rospy.ServiceException as e:
+        print("Service call failed: %s"%e)
+
+def request_init():
+    # print("wait for Service")
+    rospy.wait_for_service('applyTorque')
+    try:
+        # print("now request service")
+        applyTorque = rospy.ServiceProxy('applyTorque', Torque)
+        res = applyTorque(0, 0, 1)
+        return np.array(res.state_new)
+    except rospy.ServiceException as e:
+        print("Service call failed: %s"%e)
 
 class ACNet(object):
     def __init__(self, scope, globalAC=None):
@@ -268,11 +348,19 @@ if __name__ == "__main__":
     COORD = tf.train.Coordinator()
     saver = tf.train.Saver()
 
-    SESS.run(tf.global_variables_initializer())
-    saver.restore(SESS, 'model_adv/single-1322')
-    showoff(env, GLOBAL_AC,0)
-
+#####################
+    # have to reload double model first, this will init the double-adv agent
     GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
     SESS.run(tf.global_variables_initializer())
-    saver.restore(SESS, 'model_adv/double-1936')
-    showoff(env, GLOBAL_AC,1)   
+
+    saver.restore(SESS, 'model_adv/double-3140')
+    # showoff(env, GLOBAL_AC,1)   
+    showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 1)
+
+
+    saver.restore(SESS, 'model_adv/single-1322')
+    # showoff(env, GLOBAL_AC,0)
+    showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 0)
+#####################
+
+    # showoffReal(GLOBAL_AC,1)

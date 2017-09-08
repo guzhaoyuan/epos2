@@ -1,5 +1,9 @@
 #!/usr/bin/env python
+'''
+this file train an protagnist along with an adversary agent
+the hardness parameter is the X_amp, it defines how much torque the adversary can apply to disturb
 
+'''
 import multiprocessing
 import threading
 import tensorflow as tf
@@ -8,13 +12,15 @@ import gym
 import os
 import shutil
 import matplotlib.pyplot as plt
+from epos2.srv import *
+import rospy
 
 GAME = 'Pendulum-v0'
 OUTPUT_GRAPH = True
 LOG_DIR = './log'
-N_WORKERS = multiprocessing.cpu_count()
+N_WORKERS = 2#multiprocessing.cpu_count()
 MAX_EP_STEP = 200
-MAX_GLOBAL_EP = 2000
+MAX_GLOBAL_EP = 4000
 GLOBAL_NET_SCOPE = 'Global_Net'
 UPDATE_GLOBAL_ITER = 10
 GAMMA = 0.9
@@ -24,7 +30,8 @@ LR_C = 0.001    # learning rate for critic
 GLOBAL_RUNNING_R = []
 GLOBAL_MEAN_R = []
 GLOBAL_EP = 0
-X_amp = 0.01
+MAX_R = -1600
+X_amp = 1 # this indicate the hardness of the game
 isConverged = 0
 env = gym.make(GAME)
 
@@ -188,10 +195,10 @@ class Worker(object):
         self.AC_Adv = ACNetAdv(name, globalACAdv)
 
     def work(self):
-        global GLOBAL_RUNNING_R, GLOBAL_EP, MAX_GLOBAL_EP, X_amp, isConverged
+        global GLOBAL_RUNNING_R, GLOBAL_EP, MAX_GLOBAL_EP, X_amp, isConverged, MAX_R
         total_step = 1
         buffer_s, buffer_a, buffer_r, buffer_a_adv, buffer_r_adv = [], [], [], [], []
-        while not COORD.should_stop() and GLOBAL_EP < MAX_GLOBAL_EP:
+        while not rospy.is_shutdown() and GLOBAL_EP < MAX_GLOBAL_EP:
             s = self.env.reset()
             ep_r = 0
             for ep_t in range(MAX_EP_STEP):
@@ -249,11 +256,13 @@ class Worker(object):
                         self.AC_Adv.v_target: buffer_v_target_adv,
                     }
 
-                    self.AC.update_global(feed_dict)
-                    self.AC_Adv.update_global(feed_dict_adv)
+                    if GLOBAL_EP%40 < 20:
+                        self.AC.update_global(feed_dict)
+                        self.AC.pull_global()
+                    else:
+                        self.AC_Adv.update_global(feed_dict_adv)
+                        self.AC_Adv.pull_global()
                     buffer_s, buffer_a, buffer_r, buffer_a_adv, buffer_r_adv = [], [], [], [], []
-                    self.AC.pull_global()
-                    self.AC_Adv.pull_global()
 
                 s = s_
                 total_step += 1
@@ -266,12 +275,10 @@ class Worker(object):
                         "| Ep_r: %i" % GLOBAL_MEAN_R[-1],
                           )
                     GLOBAL_EP += 1
-                    if ep_r > -250:
-                        saver.save(SESS, 'model_adv/double',
-                           global_step=GLOBAL_EP)
-                        X_amp *= 2
-                        MAX_GLOBAL_EP += 500
-
+                    if GLOBAL_MEAN_R[-1] > MAX_R and GLOBAL_MEAN_R[-1] > -200:
+                        # saver.save(SESS, 'model_adv/double',global_step=GLOBAL_EP)
+                        print("save episode:", GLOBAL_EP)
+                        MAX_R = GLOBAL_MEAN_R[-1]
                     break
 
 
@@ -301,7 +308,7 @@ if __name__ == "__main__":
         worker_threads.append(t)
     COORD.join(worker_threads)
 
-    plt.plot(np.arange(len(GLOBAL_RUNNING_R)), GLOBAL_RUNNING_R)
+    plt.plot(np.arange(len(GLOBAL_MEAN_R)), GLOBAL_MEAN_R)
     plt.xlabel('step')
     plt.ylabel('Total moving reward')
     plt.show()

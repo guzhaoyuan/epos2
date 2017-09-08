@@ -32,7 +32,7 @@ N_A = env.action_space.shape[0]
 A_BOUND = [env.action_space.low, env.action_space.high]
 
 N_Adv_A = 1 #dimension of action space of adversary agent
-ADV_BOUND = [i*0.01 for i in A_BOUND]# the external force for the adv is a little smaller
+ADV_BOUND = [0.6*i for i in A_BOUND]# the external force for the adv is a little smaller
 
 class ACNet(object):
     def __init__(self, scope, globalAC=None):
@@ -271,7 +271,7 @@ class Worker(object):
 
 def showoff(env, global_agent):
     print ("now showoff result")
-    AC = ACNet('showoff_agent', global_agent)
+    AC = ACNetAdv('showoff_agent', global_agent)
     AC.pull_global()
 
     for episodes in range(5):
@@ -281,28 +281,13 @@ def showoff(env, global_agent):
            env.render()
            raw_input("Press Enter to continue...")
            action = AC.choose_action(state)
+           print(action)
            state_new, reward, done, _ = env.step(action) # take a random action
            reward_all = reward_all + reward
            if done:
                break
            state = state_new
        print ("episode:", episodes, ",reward: ", reward_all)
-
-    reward_all_track = []
-    for episodes in range(30):
-        state = env.reset()
-        reward_all = 0
-        for i in range(1000):
-            action = AC.choose_action(state)
-            state_new, reward, done, _ = env.step(action) # take a random action
-            reward_all = reward_all + reward
-            if done:
-                break
-            state = state_new
-        reward_all_track.append(reward_all)
-    print(reward_all_track)
-    print( "final reward", np.mean(reward_all_track[-100:]))
-    return
 
 if __name__ == "__main__":
     SESS = tf.Session()
@@ -312,16 +297,11 @@ if __name__ == "__main__":
         OPT_C = tf.train.RMSPropOptimizer(LR_C, name='RMSPropC')
         GLOBAL_AC = ACNet(GLOBAL_NET_SCOPE)  # we only need its params
         GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
-        workers = []
-        # Create worker
-        for i in range(N_WORKERS):
-            i_name = 'W_%i' % i   # worker name
-            workers.append(Worker(i_name, GLOBAL_AC,GLOBAL_AC_ADV))
 
     COORD = tf.train.Coordinator()
     saver = tf.train.Saver()
     SESS.run(tf.global_variables_initializer())
 
-    saver.restore(SESS, 'model_adv/double-955')
+    saver.restore(SESS, 'model_adv/double-1795')
 
-    showoff(env, GLOBAL_AC)
+    showoff(env, GLOBAL_AC_ADV)
