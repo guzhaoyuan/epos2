@@ -14,6 +14,8 @@ import shutil
 import matplotlib.pyplot as plt
 from epos2.srv import *
 import rospy
+import pickle
+from datetime import datetime
 
 GAME = 'Pendulum-v0'
 OUTPUT_GRAPH = True
@@ -275,8 +277,8 @@ class Worker(object):
                         "| Ep_r: %i" % GLOBAL_MEAN_R[-1],
                           )
                     GLOBAL_EP += 1
-                    if GLOBAL_MEAN_R[-1] > -300:
-                        saver.save(SESS, 'model_adv/double',global_step=GLOBAL_EP)
+                    if GLOBAL_MEAN_R[-1] > -300 and GLOBAL_MEAN_R[-1] > MAX_R:
+                        # saver.save(SESS, 'model_adv/double',global_step=GLOBAL_EP)
                         print("save episode:", GLOBAL_EP)
                         MAX_R = GLOBAL_MEAN_R[-1]
                     break
@@ -307,6 +309,11 @@ if __name__ == "__main__":
         t.start()
         worker_threads.append(t)
     COORD.join(worker_threads)
+
+    pickle_file = 'reward/double-'+datetime.now().strftime('%m-%d-%H:%M')+'.pkl'
+    with open(pickle_file, 'wb') as f:
+        pickle.dump(GLOBAL_RUNNING_R, f)
+        pickle.dump(GLOBAL_MEAN_R, f)
 
     plt.plot(np.arange(len(GLOBAL_MEAN_R)), GLOBAL_MEAN_R)
     plt.xlabel('step')

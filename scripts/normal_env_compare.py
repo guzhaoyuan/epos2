@@ -32,7 +32,7 @@ LR_A = 0.0001    # learning rate for actor
 LR_C = 0.001    # learning rate for critic
 GLOBAL_RUNNING_R = []
 GLOBAL_EP = 0
-
+X_amp = 0
 env = gym.make(GAME)
 
 N_S = env.observation_space.shape[0]
@@ -40,7 +40,7 @@ N_A = env.action_space.shape[0]
 A_BOUND = [env.action_space.low, env.action_space.high]
 
 N_Adv_A = 1 #dimension of action space of adversary agent
-ADV_BOUND = [i*0.5 for i in A_BOUND]# the external force for the adv is a little smaller
+ADV_BOUND = [i*X_amp for i in A_BOUND]# the external force for the adv is a little smaller
 print(A_BOUND, ADV_BOUND)
 
 service = 'applyTorque3'
@@ -76,7 +76,7 @@ def showoff(env, global_agent, isDouble, inspect=0):
        print ("episode:", episodes, ",reward: ", reward_all)
 
     reward_all_track = []
-    for episodes in range(30):
+    for episodes in range(50):
         state = env.reset()
         reward_all = 0
         for i in range(1000):
@@ -89,7 +89,7 @@ def showoff(env, global_agent, isDouble, inspect=0):
         reward_all_track.append(reward_all)
     # print(reward_all_track)
     print( "final reward", np.mean(reward_all_track[-100:]))
-    return
+    return np.mean(reward_all_track[-100:])
 '''
 this function is able to show double and single pro in the adv env
 '''
@@ -107,21 +107,22 @@ def showoff_in_Adv(env, global_agent, globalAC_adv, isDouble, inspect=0):
         AC_adv = ACNetAdv('showoff_single_adv', globalAC_adv)
         AC_adv.pull_global()
 
-    for episodes in range(1):
-        state = env.reset()
-        reward_all = 0
-        for i in range(200):
-            env.render()
-            action = AC.choose_action(state)
-            action_adv = AC_adv.choose_action(state)
-            state_new, reward, done, _ = env.step(action-action_adv)
-            reward_all = reward_all + reward
-            if done:
-                break
-            state = state_new
-        print ("episode:", episodes, ",reward: ", reward_all)
+    # for episodes in range(1):
+    #     state = env.reset()
+    #     reward_all = 0
+    #     for i in range(200):
+    #         env.render()
+    #         action = AC.choose_action(state)
+    #         action_adv = AC_adv.choose_action(state)
+    #         state_new, reward, done, _ = env.step(action-action_adv)
+    #         reward_all = reward_all + reward
+    #         if done:
+    #             break
+    #         state = state_new
+    #     print ("episode:", episodes, ",reward: ", reward_all)
+
     reward_all_track = []
-    for episodes in range(20):
+    for episodes in range(50):
         state = env.reset()
         reward_all = 0
         for i in range(1000):
@@ -135,7 +136,7 @@ def showoff_in_Adv(env, global_agent, globalAC_adv, isDouble, inspect=0):
         reward_all_track.append(reward_all)
     # print(reward_all_track)
     print( "final reward", np.mean(reward_all_track[-100:]))
-    return
+    return np.mean(reward_all_track[-100:])
 
 '''
 this can only showoff single and double pro in real model for now
@@ -411,15 +412,83 @@ if __name__ == "__main__":
     GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
     SESS.run(tf.global_variables_initializer())
 
-    saver.restore(SESS, 'model_adv/double-2489')
+    saver.restore(SESS, 'model_adv/double-2935')
     # showoff(env, GLOBAL_AC,1)   
-    # showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 1)
+    showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 1)
 
-
-    # saver.restore(SESS, 'model_adv/single-1322')
+    saver.restore(SESS, 'model_adv/single-1243')
     # showoff(env, GLOBAL_AC,0)
-    # showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 0)
+    showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 0)
+
+
 #####################
 
     # showoffReal(GLOBAL_AC,1)
-    showoffRealAdv(GLOBAL_AC, GLOBAL_AC_ADV)
+    # showoffRealAdv(GLOBAL_AC, GLOBAL_AC_ADV)
+
+#####################
+
+    # GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
+    # SESS.run(tf.global_variables_initializer())
+
+    # saver.restore(SESS, 'model_adv/double-2935')
+
+    
+    # AC = ACNet('showoff_double', GLOBAL_AC)
+    # AC_adv = ACNetAdv('showoff_double_adv', GLOBAL_AC_ADV)
+
+    # AC.pull_global()
+    # AC_adv.pull_global()
+
+    # print ("now showoff double in env-adv")
+    # X_amp = 0
+    # double_reward = []
+    # while X_amp < 0.9:
+    #     reward_all_track = []
+    #     for episodes in range(10):
+    #         state = env.reset()
+    #         reward_all = 0
+    #         for i in range(1000):
+    #             action = AC.choose_action(state)
+    #             action_adv = AC_adv.choose_action(state)
+    #             state_new, reward, done, _ = env.step(action-action_adv)
+    #             reward_all = reward_all + reward
+    #             if done:
+    #                 break
+    #             state = state_new
+    #         reward_all_track.append(reward_all)
+    #     double_reward.append(np.mean(reward_all_track[-100:]))
+    #     X_amp += 0.05
+    # print(double_reward)
+    # # double_reward = double_reward[0::2]
+
+    # print ("now showoff single in env-adv")
+    # saver.restore(SESS, 'model_adv/single-1243')
+    # AC.pull_global()
+    # AC_adv.pull_global()
+    # X_amp = 0
+    # single_reward = []
+    # while X_amp < 0.9:
+    #     reward_all_track = []
+    #     for episodes in range(10):
+    #         state = env.reset()
+    #         reward_all = 0
+    #         for i in range(1000):
+    #             action = AC.choose_action(state)
+    #             action_adv = AC_adv.choose_action(state)
+    #             state_new, reward, done, _ = env.step(action-action_adv)
+    #             reward_all = reward_all + reward
+    #             if done:
+    #                 break
+    #             state = state_new
+    #         reward_all_track.append(reward_all)
+    #     single_reward.append(np.mean(reward_all_track[-100:]))
+    #     X_amp += 0.05
+    # print(single_reward)
+
+    # plt.plot(np.arange(len(single_reward)), single_reward)
+    # plt.plot(np.arange(len(double_reward)), double_reward)
+    # plt.xlabel('step')
+    # plt.ylabel('Total moving reward')
+    # plt.legend(['single', 'double'])
+    # plt.show()
