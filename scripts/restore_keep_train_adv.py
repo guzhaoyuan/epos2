@@ -34,7 +34,7 @@ LR_C = 0.001    # learning rate for critic
 GLOBAL_RUNNING_R = []
 GLOBAL_MEAN_R = []
 GLOBAL_EP = 0
-X_amp = 0.5
+X_amp = 0.2
 env = gym.make(GAME)
 
 N_S = env.observation_space.shape[0]
@@ -302,6 +302,7 @@ if __name__ == "__main__":
 
     SESS.run(tf.global_variables_initializer())
     restore_file = 'model_adv_real/double-3611'
+    # restore_file = 'model/ckpt-64'
     saver.restore(SESS, restore_file)
     # showoff(env, GLOBAL_AC,1)   
     # showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 1)
@@ -330,7 +331,10 @@ if __name__ == "__main__":
             #     self.env.render()
             a = AC.choose_action(s)
             a_adv = AC_Adv.choose_action(s)
-            res = request_torque_adv(ep_t, a, a_adv)
+            if GLOBAL_EP < 100:
+                res = request_torque_adv(ep_t, a, a_adv)
+            else:
+                res = request_torque_adv(ep_t, a, a_adv)
             print "state:", s, ",actions:", a[0],a_adv[0], ",\treward:", res.reward, "\tdone", res.done
             # print("s:",s,"a:",a,"adv:",a_adv,"r:",r)
 

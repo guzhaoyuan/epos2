@@ -43,7 +43,7 @@ N_Adv_A = 1 #dimension of action space of adversary agent
 ADV_BOUND = [i*X_amp for i in A_BOUND]# the external force for the adv is a little smaller
 print(A_BOUND, ADV_BOUND)
 
-service = 'applyTorque3'
+service = 'applyTorque'
 
 '''
 now able to show both double and single pro as well as load double adv 
@@ -409,23 +409,29 @@ if __name__ == "__main__":
 
 #####################
 # have to reload double model first, this will init the double-adv agent
-    GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
-    SESS.run(tf.global_variables_initializer())
+    # GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
+    # SESS.run(tf.global_variables_initializer())
 
-    saver.restore(SESS, 'model_adv/double-2935')
+    # saver.restore(SESS, 'model_adv/double-2935')
     # showoff(env, GLOBAL_AC,1)   
-    showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 1)
+    # showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 1)
     # showoffReal(GLOBAL_AC, 1)
 
-    saver.restore(SESS, 'model_adv/single-1243')
+    # saver.restore(SESS, 'model_adv/single-1243')
     # # showoff(env, GLOBAL_AC,0)
-    showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 0)
+    # showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 0)
     # showoffReal(GLOBAL_AC, 1)
 
 #####################
 # this part shows the trained agent in real model
+    # GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
+    SESS.run(tf.global_variables_initializer())
+    saver.restore(SESS, 'model_adv_real/double-3611-249')
 
-    # showoffReal(GLOBAL_AC,1)
+    # SESS.run(tf.global_variables_initializer())
+    # saver.restore(SESS, 'model/ckpt-73')
+    
+    showoffReal(GLOBAL_AC,1)
     # showoffRealAdv(GLOBAL_AC, GLOBAL_AC_ADV)
 
 #####################

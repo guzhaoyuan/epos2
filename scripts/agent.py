@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+'''
+this file is used to train A3C pendulum and same the trajectory as pickle at the same time
+'''
+
 from epos2.srv import *
 import rospy
 import sys
