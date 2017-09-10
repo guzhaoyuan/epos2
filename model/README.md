@@ -1,0 +1,1 @@
+ckpt-73 is good enough as a trained single

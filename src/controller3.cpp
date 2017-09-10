@@ -140,12 +140,14 @@ bool applyTorque(epos2::Torque2::Request &req, epos2::Torque2::Response &res)
 	    }
 
 	    //calc reward
-	    // torque = req.torque;
 	    torque = min(CURRENT_MAX,max(CURRENT_MIN, torque)); // soft limit torque
 	    torque2 = req.torque2;
 	    torque2 = min(CURRENT_MAX,max(CURRENT_MIN, torque2)); // soft limit torque
+	    // if(torque==0 & torque2 ==0){
+	    // 	cout<<"rest"<<endl;
+	    // }
 		reward = -(angle_old*angle_old + 0.01*pVelocityIs_old*pVelocityIs_old + 0.001*req.torque*req.torque);
-		cout<<position_old<<",\t"<<angle_old<<",\t"<<pVelocityIs_old<<",\t"<<req.torque<<",\t"<<reward<<endl;
+		// cout<<position_old<<",\t"<<angle_old<<",\t"<<pVelocityIs_old<<",\t"<<req.torque<<",\t"<<reward<<endl;
 
 		// res.current = current;
 		// res.position_new = position_new;
@@ -162,7 +164,7 @@ bool applyTorque(epos2::Torque2::Request &req, epos2::Torque2::Response &res)
 		// the force transform of the data type can cause problem
 		while((next - ros::Time::now()).toSec()<0){
 			next += interval;
-			ROS_INFO("");
+			// ROS_INFO("");
 		}
 		(next - ros::Time::now()).sleep();
 

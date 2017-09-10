@@ -22,8 +22,9 @@ GAME = 'Pendulum-v0'
 OUTPUT_GRAPH = True
 LOG_DIR = './log'
 N_WORKERS = 4#multiprocessing.cpu_count()
-MAX_EP_STEP = 200
-MAX_GLOBAL_EP = 4000
+MAX_EP_STEP = 250
+MAX_GLOBAL_EP = 300
+MAX_R = -1600
 GLOBAL_NET_SCOPE = 'Global_Net'
 UPDATE_GLOBAL_ITER = 10
 GAMMA = 0.6
@@ -31,8 +32,9 @@ ENTROPY_BETA = 0.01
 LR_A = 0.0001    # learning rate for actor
 LR_C = 0.001    # learning rate for critic
 GLOBAL_RUNNING_R = []
+GLOBAL_MEAN_R = []
 GLOBAL_EP = 0
-X_amp = 0.3
+X_amp = 0.5
 env = gym.make(GAME)
 
 N_S = env.observation_space.shape[0]
@@ -44,100 +46,6 @@ ADV_BOUND = [i*X_amp for i in A_BOUND]# the external force for the adv is a litt
 print(A_BOUND, ADV_BOUND)
 
 service = 'applyTorque3'
-
-'''
-now able to show both double and single pro as well as load double adv 
-as long as restore the double model first and do not clean using "tf.global_init"
-'''
-def showoff(env, global_agent, isDouble, inspect=0):
-    if isDouble:
-        print ("now showoff adv result")
-        AC = ACNet('showoff_double', global_agent)
-        AC.pull_global()
-    else:
-        print ("now showoff result")
-        AC = ACNet('showoff_single', global_agent)
-        AC.pull_global()
-
-    for episodes in range(1):
-       state = env.reset()
-       reward_all = 0
-       while(True):
-           env.render()
-           action = AC.choose_action(state)
-           # print(action)
-           if inspect != 0:
-               raw_input("Press Enter to continue...")
-           state_new, reward, done, _ = env.step(action)
-           reward_all = reward_all + reward
-           if done:
-               break
-           state = state_new
-       print ("episode:", episodes, ",reward: ", reward_all)
-
-    reward_all_track = []
-    for episodes in range(50):
-        state = env.reset()
-        reward_all = 0
-        for i in range(1000):
-            action = AC.choose_action(state)
-            state_new, reward, done, _ = env.step(action) 
-            reward_all = reward_all + reward
-            if done:
-                break
-            state = state_new
-        reward_all_track.append(reward_all)
-    # print(reward_all_track)
-    print( "final reward", np.mean(reward_all_track[-100:]))
-    return np.mean(reward_all_track[-100:])
-'''
-this function is able to show double and single pro in the adv env
-'''
-def showoff_in_Adv(env, global_agent, globalAC_adv, isDouble, inspect=0):
-    if isDouble:
-        print ("now showoff double in env-adv")
-        AC = ACNet('showoff_double', global_agent)
-        AC.pull_global()
-        AC_adv = ACNetAdv('showoff_double_adv', globalAC_adv)
-        AC_adv.pull_global()
-    else:
-        print ("now showoff single in env-adv")
-        AC = ACNet('showoff_single', global_agent)
-        AC.pull_global()
-        AC_adv = ACNetAdv('showoff_single_adv', globalAC_adv)
-        AC_adv.pull_global()
-
-    # for episodes in range(1):
-    #     state = env.reset()
-    #     reward_all = 0
-    #     for i in range(200):
-    #         env.render()
-    #         action = AC.choose_action(state)
-    #         action_adv = AC_adv.choose_action(state)
-    #         state_new, reward, done, _ = env.step(action-action_adv)
-    #         reward_all = reward_all + reward
-    #         if done:
-    #             break
-    #         state = state_new
-    #     print ("episode:", episodes, ",reward: ", reward_all)
-
-    reward_all_track = []
-    for episodes in range(50):
-        state = env.reset()
-        reward_all = 0
-        for i in range(1000):
-            action = AC.choose_action(state)
-            action_adv = AC_adv.choose_action(state)
-            state_new, reward, done, _ = env.step(action-action_adv)
-            reward_all = reward_all + reward
-            if done:
-                break
-            state = state_new
-        reward_all_track.append(reward_all)
-    # print(reward_all_track)
-    print( "final reward", np.mean(reward_all_track[-100:]))
-    return np.mean(reward_all_track[-100:])
-
 '''
 this can only showoff single and double pro in real model for now
 '''
@@ -201,18 +109,6 @@ def showoffRealAdv(global_agent, global_agent_adv, nonStop = 0):
                 print("done episode, reward:", ep_r)
                 break
 
-def request_torque(position, current, init=0):
-    # print("wait for Service")
-    #asset current in range(-2,2)
-    rospy.wait_for_service(service)
-    try:
-        # print("now request service")
-        applyTorque = rospy.ServiceProxy(service, Torque)
-        # print("request service: ", current)
-        res = applyTorque(position, current, init)
-        return res
-    except rospy.ServiceException as e:
-        print("Service call failed: %s"%e)
 
 def request_torque_adv(position, current, current2, init=0):
     # print("wait for Service")
@@ -227,16 +123,6 @@ def request_torque_adv(position, current, current2, init=0):
     except rospy.ServiceException as e:
         print("Service call failed: %s"%e)
 
-def request_init():
-    # print("wait for Service")
-    rospy.wait_for_service(service)
-    try:
-        # print("now request service")
-        applyTorque = rospy.ServiceProxy(service, Torque)
-        res = applyTorque(0, 0, 1)
-        return np.array(res.state_new)
-    except rospy.ServiceException as e:
-        print("Service call failed: %s"%e)
 
 def request_init_adv():
     # print("wait for Service")
@@ -408,91 +294,111 @@ if __name__ == "__main__":
     saver = tf.train.Saver()
 
 #####################
-# have to reload double model first, this will init the double-adv agent
+    # have to reload double model first, this will init the double-adv agent
     GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
-    SESS.run(tf.global_variables_initializer())
 
-    saver.restore(SESS, 'model_adv/double-2935')
+    AC = ACNet('showoff_agent', GLOBAL_AC)
+    AC_Adv = ACNetAdv('showoff_agent', GLOBAL_AC_ADV)
+
+    SESS.run(tf.global_variables_initializer())
+    restore_file = 'model_adv_real/double-3611'
+    saver.restore(SESS, restore_file)
     # showoff(env, GLOBAL_AC,1)   
-    showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 1)
+    # showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 1)
     # showoffReal(GLOBAL_AC, 1)
 
-    saver.restore(SESS, 'model_adv/single-1243')
+    # saver.restore(SESS, 'model_adv/single-1243')
     # # showoff(env, GLOBAL_AC,0)
-    showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 0)
+    # # showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 0)
     # showoffReal(GLOBAL_AC, 1)
 
 #####################
-# this part shows the trained agent in real model
 
     # showoffReal(GLOBAL_AC,1)
     # showoffRealAdv(GLOBAL_AC, GLOBAL_AC_ADV)
 
-#####################
+    AC.pull_global()
+    AC_Adv.pull_global()
 
-# this part of code was used to generate compare img for single and double in adv env
+    total_step = 1
+    buffer_s, buffer_a, buffer_r, buffer_a_adv, buffer_r_adv = [], [], [], [], []
+    while not rospy.is_shutdown() and GLOBAL_EP < MAX_GLOBAL_EP:
+        s = request_init_adv()
+        ep_r = 0
+        for ep_t in range(MAX_EP_STEP):
+            # if self.name == 'W_0':
+            #     self.env.render()
+            a = AC.choose_action(s)
+            a_adv = AC_Adv.choose_action(s)
+            res = request_torque_adv(ep_t, a, a_adv)
+            print "state:", s, ",actions:", a[0],a_adv[0], ",\treward:", res.reward, "\tdone", res.done
+            # print("s:",s,"a:",a,"adv:",a_adv,"r:",r)
 
-    # GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
-    # SESS.run(tf.global_variables_initializer())
+            buffer_s.append(s)
+            buffer_a.append(a)
+            buffer_a_adv.append(a_adv)
+            buffer_r.append((res.reward+8)/8)    # normalize
+            buffer_r_adv.append(-(res.reward+8)/8)    # normalize
 
-    # saver.restore(SESS, 'model_adv_real/double-3611')
+            if total_step % UPDATE_GLOBAL_ITER == 0 or res.done:   # update global and assign to local net
+                if res.done:
+                    v_s_ = 0   # terminal
+                    v_s_adv = 0   # terminal
+                else:
+                    v_s_ = SESS.run(AC.v, {AC.s: s_[np.newaxis, :]})[0, 0]
+                    v_s_adv = SESS.run(AC_Adv.v, {AC_Adv.s: s_[np.newaxis, :]})[0, 0]
 
-    
-    # AC = ACNet('showoff_double', GLOBAL_AC)
-    # AC_adv = ACNetAdv('showoff_double_adv', GLOBAL_AC_ADV)
+                buffer_v_target, buffer_v_target_adv = [], []
 
-    # AC.pull_global()
-    # AC_adv.pull_global()
+                for r in buffer_r[::-1]:    # reverse buffer r
+                    v_s_ = r + GAMMA * v_s_
+                    buffer_v_target.append(v_s_)
+                buffer_v_target.reverse()
 
-    # print ("now showoff double in env-adv")
-    # X_amp = 0
-    # double_reward = []
-    # while X_amp < 0.9:
-    #     reward_all_track = []
-    #     for episodes in range(10):
-    #         state = env.reset()
-    #         reward_all = 0
-    #         for i in range(1000):
-    #             action = AC.choose_action(state)
-    #             action_adv = AC_adv.choose_action(state)
-    #             state_new, reward, done, _ = env.step(action-action_adv)
-    #             reward_all = reward_all + reward
-    #             if done:
-    #                 break
-    #             state = state_new
-    #         reward_all_track.append(reward_all)
-    #     double_reward.append(np.mean(reward_all_track[-100:]))
-    #     X_amp += 0.05
-    # print(double_reward)
-    # # double_reward = double_reward[0::2]
+                for r in buffer_r_adv[::-1]:    # reverse buffer r
+                    v_s_adv = r + GAMMA * v_s_adv
+                    buffer_v_target_adv.append(v_s_adv)
+                buffer_v_target_adv.reverse()
+                
+                buffer_s, buffer_a, buffer_v_target = np.vstack(buffer_s), np.vstack(buffer_a), np.vstack(buffer_v_target)
+                buffer_a_adv, buffer_v_target_adv = np.vstack(buffer_a_adv), np.vstack(buffer_v_target_adv)
 
-    # print ("now showoff single in env-adv")
-    # saver.restore(SESS, 'model_adv/single-1243')
-    # AC.pull_global()
-    # AC_adv.pull_global()
-    # X_amp = 0
-    # single_reward = []
-    # while X_amp < 0.9:
-    #     reward_all_track = []
-    #     for episodes in range(10):
-    #         state = env.reset()
-    #         reward_all = 0
-    #         for i in range(1000):
-    #             action = AC.choose_action(state)
-    #             action_adv = AC_adv.choose_action(state)
-    #             state_new, reward, done, _ = env.step(action-action_adv)
-    #             reward_all = reward_all + reward
-    #             if done:
-    #                 break
-    #             state = state_new
-    #         reward_all_track.append(reward_all)
-    #     single_reward.append(np.mean(reward_all_track[-100:]))
-    #     X_amp += 0.05
-    # print(single_reward)
+                feed_dict = {
+                    AC.s: buffer_s,
+                    AC.a_his: buffer_a,
+                    AC.v_target: buffer_v_target,
+                }
 
-    # plt.plot(np.arange(len(single_reward)), single_reward)
-    # plt.plot(np.arange(len(double_reward)), double_reward)
-    # plt.xlabel('step')
-    # plt.ylabel('Total moving reward')
-    # plt.legend(['single', 'double'])
-    # plt.show()
+                feed_dict_adv = {
+                    AC_Adv.s: buffer_s,
+                    AC_Adv.a_his: buffer_a_adv,
+                    AC_Adv.v_target: buffer_v_target_adv,
+                }
+
+                if GLOBAL_EP%40 < 20:
+                    AC.update_global(feed_dict)
+                    AC.pull_global()
+                else:
+                    AC_Adv.update_global(feed_dict_adv)
+                    AC_Adv.pull_global()
+                buffer_s, buffer_a, buffer_r, buffer_a_adv, buffer_r_adv = [], [], [], [], []
+
+            s_ = np.array(res.state_new)
+            s = s_
+            ep_r += res.reward
+
+            if res.done:
+                print("now torque zero")
+                res = request_torque_adv(201, 0, 0) # apply zero force to let stop
+                GLOBAL_RUNNING_R.append(ep_r)
+                GLOBAL_MEAN_R.append(np.mean(GLOBAL_RUNNING_R[-50:]))
+                print(
+                    "Ep:", GLOBAL_EP,
+                    "| Ep_r: %i" % GLOBAL_MEAN_R[-1],
+                      )
+                GLOBAL_EP += 1
+                if GLOBAL_RUNNING_R[-1] > -50 :
+                    saver.save(SESS, restore_file ,global_step=GLOBAL_EP)
+                    print("save episode:", GLOBAL_EP)
+                    MAX_R = GLOBAL_RUNNING_R[-1]
+                break

@@ -32,7 +32,7 @@ N_S = env.observation_space.shape[0]
 N_A = env.action_space.shape[0]
 A_BOUND = [env.action_space.low, env.action_space.high]
 
-service = 'applyTorque2'
+service = 'applyTorque'
 
 def request_torque(position, current, init=0):
     # print("wait for Service")
@@ -281,6 +281,7 @@ if __name__ == "__main__":
     saver = tf.train.Saver()
     SESS.run(tf.global_variables_initializer())
 
+    # saver.restore(SESS, 'model_adv_real/double-3611-299')
     saver.restore(SESS, 'model/ckpt-73')
 
     # showoff(env, GLOBAL_AC)
