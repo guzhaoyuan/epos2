@@ -162,7 +162,7 @@ class Worker(object):
                           )
                     GLOBAL_EP += 1
                     if GLOBAL_MEAN_R[-1] > MAX_R and GLOBAL_MEAN_R[-1] > -350:
-                        saver.save(SESS, 'model_adv/single',global_step=GLOBAL_EP)
+                        # saver.save(SESS, 'model_adv/single',global_step=GLOBAL_EP)
                         print("save episode:", GLOBAL_EP)
                         MAX_R = GLOBAL_MEAN_R[-1]
                     break

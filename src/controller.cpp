@@ -111,7 +111,7 @@ int zero_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 {
 	if(req.init == 1){
-		random_init(req, res);
+		down_init(req, res);
 		return true;
 	}else{
 		unsigned int ulErrorCode = 0;

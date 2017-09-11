@@ -291,7 +291,7 @@ if __name__ == "__main__":
         # GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
 
     COORD = tf.train.Coordinator()
-    saver = tf.train.Saver()
+    saver = tf.train.Saver(max_to_keep=100)
 
 #####################
     # have to reload double model first, this will init the double-adv agent
@@ -301,7 +301,7 @@ if __name__ == "__main__":
     AC_Adv = ACNetAdv('showoff_agent', GLOBAL_AC_ADV)
 
     SESS.run(tf.global_variables_initializer())
-    restore_file = 'model_adv_real/double-3611'
+    restore_file = 'model_adv_real/double-4367-113-42-214'
     # restore_file = 'model/ckpt-64'
     saver.restore(SESS, restore_file)
     # showoff(env, GLOBAL_AC,1)   
@@ -332,7 +332,7 @@ if __name__ == "__main__":
             a = AC.choose_action(s)
             a_adv = AC_Adv.choose_action(s)
             if GLOBAL_EP < 100:
-                res = request_torque_adv(ep_t, a, a_adv)
+                res = request_torque_adv(ep_t, a, 0)
             else:
                 res = request_torque_adv(ep_t, a, a_adv)
             print "state:", s, ",actions:", a[0],a_adv[0], ",\treward:", res.reward, "\tdone", res.done

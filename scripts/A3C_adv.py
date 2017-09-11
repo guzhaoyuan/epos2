@@ -33,7 +33,7 @@ GLOBAL_RUNNING_R = []
 GLOBAL_MEAN_R = []
 GLOBAL_EP = 0
 MAX_R = -1600
-X_amp = 0.3 # this indicate the hardness of the game
+X_amp = 0.2 # this indicate the hardness of the game
 isConverged = 1
 env = gym.make(GAME)
 
@@ -278,7 +278,7 @@ class Worker(object):
                           )
                     GLOBAL_EP += 1
                     if GLOBAL_MEAN_R[-1] > -350 and GLOBAL_MEAN_R[-1] > MAX_R:
-                        saver.save(SESS, 'model_adv_real/double',global_step=GLOBAL_EP)
+                        # saver.save(SESS, 'model_adv_real/double',global_step=GLOBAL_EP)
                         print("save episode:", GLOBAL_EP)
                         MAX_R = GLOBAL_MEAN_R[-1]
                     break
