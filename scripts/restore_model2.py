@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-
+'''
+the only difference between this script and restore_model.py is they are using different service, calling different servo
+'''
 import multiprocessing
 import threading
 import tensorflow as tf
@@ -32,7 +34,7 @@ N_S = env.observation_space.shape[0]
 N_A = env.action_space.shape[0]
 A_BOUND = [env.action_space.low, env.action_space.high]
 
-service = 'applyTorque'
+service = 'applyTorque2'
 
 def request_torque(position, current, init=0):
     # print("wait for Service")
@@ -247,7 +249,7 @@ def showoffReal(global_agent, nonStop = 0):
     print ("now showoff result")
     AC = ACNet('showoff_agent', global_agent)
     AC.pull_global()
-    for i in range(1):
+    for i in range(5):
         buffer_s, buffer_a, buffer_r = [], [], []
         step = 0
         ep_r = 0
@@ -283,9 +285,9 @@ if __name__ == "__main__":
     saver = tf.train.Saver()
     SESS.run(tf.global_variables_initializer())
 
-    saver.restore(SESS, 'model_adv_real/double-3611-249')
-    # saver.restore(SESS, 'model/ckpt-63')
-    # saver.restore(SESS, 'model_adv_real/double-4367')
+    # saver.restore(SESS, 'model_adv_real/double-3611-299')
+    saver.restore(SESS, 'model/ckpt-63')
+    # saver.restore(SESS, 'model_adv_real/double-4367-113-42-214')
 
     # showoff(env, GLOBAL_AC)
     showoffReal(GLOBAL_AC)

@@ -274,21 +274,17 @@ if __name__ == "__main__":
         OPT_A = tf.train.RMSPropOptimizer(LR_A, name='RMSPropA')
         OPT_C = tf.train.RMSPropOptimizer(LR_C, name='RMSPropC')
         GLOBAL_AC = ACNet(GLOBAL_NET_SCOPE)  # we only need its params
-        workers = []
-        # Create worker
-        for i in range(N_WORKERS):
-            i_name = 'W_%i' % i   # worker name
-            workers.append(Worker(i_name, GLOBAL_AC))
 
     COORD = tf.train.Coordinator()
     saver = tf.train.Saver()
+    LOCAL_AC = ACNet('L_0', GLOBAL_AC)
     SESS.run(tf.global_variables_initializer())
 
-    saver.restore(SESS, 'model/ckpt-64')
+    restore_file = 'model/ckpt-64'
+    saver.restore(SESS, restore_file)
 
-    showoffReal(GLOBAL_AC)
+    # showoffReal(GLOBAL_AC)
 
-    LOCAL_AC = ACNet('L_0', GLOBAL_AC)
     LOCAL_AC.pull_global()
 
     list_dict = []
@@ -338,11 +334,12 @@ if __name__ == "__main__":
 
             if res.done:
                 res = request_torque(step+1, 0)
-
-                if ep_r > -300:
-                    saver.save(SESS, 'model/ckpt',
-                       global_step=episode)
-
                 GLOBAL_RUNNING_R.append(ep_r)
                 print("done episode:", episode, ",reward:", ep_r)
+
+                if GLOBAL_RUNNING_R[-1] > -50 :
+                    saver.save(SESS, restore_file ,global_step=GLOBAL_EP)
+                    print("save episode:", GLOBAL_EP)
+                    MAX_R = GLOBAL_RUNNING_R[-1]
+
                 break

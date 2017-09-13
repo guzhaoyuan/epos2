@@ -23,6 +23,9 @@ void LogInfo(string message)
 void SetDefaultParameters()
 {
 	//USB
+	// exchange the node id if it fails to write command to epos2
+	// with two epos2 connected, it always success in connect
+	// but if we get the node id wrong, it fails to write command to epos2 
 	g_usNodeId = 1;
 	g_usNodeId2 = 2;
 	g_deviceName = "EPOS2"; //EPOS version

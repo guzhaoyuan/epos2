@@ -301,7 +301,7 @@ if __name__ == "__main__":
     AC_Adv = ACNetAdv('showoff_agent', GLOBAL_AC_ADV)
 
     SESS.run(tf.global_variables_initializer())
-    restore_file = 'model_adv_real/double-4367-113-42-214'
+    restore_file = 'model_adv_real/double-4367-113-42-115'
     # restore_file = 'model/ckpt-64'
     saver.restore(SESS, restore_file)
     # showoff(env, GLOBAL_AC,1)   
@@ -379,12 +379,14 @@ if __name__ == "__main__":
                     AC_Adv.v_target: buffer_v_target_adv,
                 }
 
-                if GLOBAL_EP%40 < 20:
-                    AC.update_global(feed_dict)
-                    AC.pull_global()
-                else:
-                    AC_Adv.update_global(feed_dict_adv)
-                    AC_Adv.pull_global()
+                AC.update_global(feed_dict)
+                AC.pull_global()
+                # if GLOBAL_EP%40 < 20:
+                #     AC.update_global(feed_dict)
+                #     AC.pull_global()
+                # else:
+                #     AC_Adv.update_global(feed_dict_adv)
+                #     AC_Adv.pull_global()
                 buffer_s, buffer_a, buffer_r, buffer_a_adv, buffer_r_adv = [], [], [], [], []
 
             s_ = np.array(res.state_new)

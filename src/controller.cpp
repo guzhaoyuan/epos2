@@ -3,7 +3,7 @@
     Purpose: used for control the pendulum hardware
 
     @author Zhaoyuan Gu
-    @version 0.1 08/23/17 
+    @version 0.2 09/10/17 
 */
 #include "ros/ros.h"
 #include <signal.h>
@@ -17,9 +17,9 @@
 #define V_LOW -10.0f
 #define V_HIGH 10.0f
 #define CURRENT_MAX 2.0f
-#define CURRENT_MIN -2.0f // res.torque = (-1,1)
-#define TORQUE_AMP 1500 //torque applied = TORQUE_AMP * res.torque // 2000 is for max real
-#define MAX_STEP 200
+#define CURRENT_MIN -2.0f // res.torque = (-2,2)
+#define TORQUE_AMP 1500 //torque applied = TORQUE_AMP * res.torque, so the max current here is 1500*2=3000mA
+#define MAX_STEP 300
 /**
 	define clockwise is minus, conterclockwise is positive
 	define theta is the angle from upward axis to pumdulum, range (-PI , PI]
@@ -35,13 +35,14 @@
 
 ros::Time begin;
 // ros::Duration interval(1.0); // 1s
-ros::Duration interval(0,20000000); // 0s,33ms
+ros::Duration interval(0,33000000); // 0s,33ms
 ros::Time next;
 
 int position_old, position_new; // for calc velocity
 float angle_old, angle_new, pVelocityIs, pVelocityIs_old, reward, torque;
 short current;
 
+// start episode from a random position and velocity
 int random_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 	// need to update angle while random init
 	// wait until position do not change
@@ -70,6 +71,7 @@ int random_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 	return true;
 }
 
+// start episode from a downward position and velocity = 0, need to wait long time between episodes
 int down_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 	// need to update angle while random init
 	// wait until position do not change
@@ -88,6 +90,7 @@ int down_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 	return true;
 }
 
+// move back to zero position according to encoder, do not use when pendulum installed
 int zero_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 	// need to update angle while random init
 	// wait until position do not change
@@ -108,6 +111,7 @@ int zero_init(epos2::Torque::Request &req, epos2::Torque::Response &res){
 	return true;
 }
 
+// the actual function to write torque and control time step, and return information to agent
 bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 {
 	if(req.init == 1){
@@ -117,16 +121,17 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 		unsigned int ulErrorCode = 0;
 
 
-		// ROS_INFO("now read position n current");
+		// ROS_INFO("now read position");
 		get_position(g_pKeyHandle, g_usNodeId, &position_new, &ulErrorCode);
 
 		// get_current(g_pKeyHandle, g_usNodeId, &current, &ulErrorCode);
 		// get_velocity(g_pKeyHandle, g_usNodeId, &pVelocityIs, &ulErrorCode);
 		
-		//calc velocity before angle, using continuous position n angle, rad/s
+		//calc velocity before angle, using continuous position and angle, rad/s
 		pVelocityIs = (float)(position_new - position_old)/pulse_per_round*2*PI/interval.toSec();
 		if(abs(pVelocityIs) > V_HIGH){
-			torque = req.torque * V_HIGH / pVelocityIs;// this is a strange way, to constrain the velocity
+			// this is a strange way, to soft constrain the velocity under current mode, but it seems works
+			torque = req.torque * V_HIGH / pVelocityIs;
 		}else{
 			torque = req.torque;
 		}
@@ -139,7 +144,7 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 	    	angle_new += 2*PI; // angle range (-PI , PI]
 	    }
 
-	    //calc reward
+	    // calc reward
 	    // torque = req.torque;
 	    torque = min(CURRENT_MAX,max(CURRENT_MIN, torque)); // soft limit torque
 		reward = -(angle_old*angle_old + 0.01*pVelocityIs_old*pVelocityIs_old + 0.001*req.torque*req.torque);
@@ -157,23 +162,15 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 		angle_old = angle_new;
 		pVelocityIs_old = pVelocityIs;
 
-		// the force transform of the data type can cause problem
 		while((next - ros::Time::now()).toSec()<0){
 			next += interval;
 			ROS_INFO("");
 		}
 		(next - ros::Time::now()).sleep();
 
-		// if((next - ros::Time::now()).toSec()<0){
-		// 	next += interval;
-		// 	ROS_INFO("");
-		// }
-		// if((next - ros::Time::now()).toSec()<0){
+		//TODO: if this step exceeds the timestep, write command it as quick as possible
 
-		// }
-		// (next - ros::Time::now()).sleep();
-
-		// use position as step
+		// here the position used as step counter for convenience
 		ROS_INFO("now write: step=%ld, torque=%f", (long int)req.position, TORQUE_AMP*torque);
 		SetCurrentMust(g_pKeyHandle, g_usNodeId, TORQUE_AMP*torque, &ulErrorCode);
 
@@ -182,16 +179,21 @@ bool applyTorque(epos2::Torque::Request &req, epos2::Torque::Response &res)
 	return true;
 }
 
+// handler from ctrl-C
 void mySigintHandler(int sig)
 {
-  // Do some custom action.
   // For example, publish a stop message to some other nodes.
   ROS_INFO("server shutdown.");
   // All the default sigint handler does is call shutdown()
   ros::shutdown();
 }
 
-
+/**
+	main routine: 
+	after connect to epos2 and init ros node, the process wait for request calls
+	the client should call init pendulum first, the server side returns an initial state
+	then the client calls for action, the controller will execute the command at specified timestep
+**/
 int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "epos2_controller");
@@ -209,16 +211,12 @@ int main(int argc, char **argv)
 		LogError("OpenDevice", lResult, ulErrorCode);
 		return lResult;
 	}
-	// if((lResult = OpenDevice2(&ulErrorCode))!=MMC_SUCCESS)
-	// {
-	// 	LogError("OpenDevice", lResult, ulErrorCode);
-	// 	return lResult;
-	// }
-	// clear fault
+
 	VCS_ClearFault(g_pKeyHandle, g_usNodeId, &ulErrorCode); 
 	SetEnableState(g_pKeyHandle, g_usNodeId, &ulErrorCode);
 	ActivateProfileCurrentMode(g_pKeyHandle, g_usNodeId, &ulErrorCode);
 
+	// create a ros service to wait for request
 	ros::ServiceServer service = n.advertiseService("applyTorque", applyTorque);
 
 	signal(SIGINT, mySigintHandler);

@@ -1,9 +1,9 @@
 /**
-    controller.cpp
+    controller2.cpp
     Purpose: used for control the pendulum hardware
 
     @author Zhaoyuan Gu
-    @version 0.1 08/23/17 
+    @version 0.1 09/10/17
 */
 #include "ros/ros.h"
 #include <signal.h>
@@ -19,7 +19,7 @@
 #define CURRENT_MAX 2.0f
 #define CURRENT_MIN -2.0f // res.torque = (-1,1)
 #define TORQUE_AMP 1500 //torque applied = TORQUE_AMP * res.torque // 2000 is for max real
-#define MAX_STEP 200
+#define MAX_STEP 300
 /**
 	define clockwise is minus, conterclockwise is positive
 	define theta is the angle from upward axis to pumdulum, range (-PI , PI]

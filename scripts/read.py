@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+
+'''
+this fiile read the pickle file and plot the reward from the stored data
+'''
+
 # pickle_file = 'data/dataset-09-03-06:59.pkl' # this is trained 114 episodes, but found the time lag is severe for pickle write
 # pickle_file = 'data/dataset-09-03-07:53.pkl' # trained for 2 hours, in local minimum, dont use
 # pickle_file = 'data/dataset-09-03-10:13.pkl' # this is trained faster, but still not working, until I found the true reason, mod in cpp was wrong

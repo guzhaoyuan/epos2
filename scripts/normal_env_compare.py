@@ -418,20 +418,20 @@ if __name__ == "__main__":
     # showoffReal(GLOBAL_AC, 1)
 
     # saver.restore(SESS, 'model_adv/single-1243')
-    # # showoff(env, GLOBAL_AC,0)
+    # showoff(env, GLOBAL_AC,0)
     # showoff_in_Adv(env, GLOBAL_AC, GLOBAL_AC_ADV, 0)
     # showoffReal(GLOBAL_AC, 1)
 
 #####################
 # this part shows the trained agent in real model
     # GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
-    SESS.run(tf.global_variables_initializer())
-    saver.restore(SESS, 'model_adv_real/double-3611-249')
+    # SESS.run(tf.global_variables_initializer())
+    # saver.restore(SESS, 'model_adv_real/double-3611-249')
 
     # SESS.run(tf.global_variables_initializer())
     # saver.restore(SESS, 'model/ckpt-73')
     
-    showoffReal(GLOBAL_AC,1)
+    # showoffReal(GLOBAL_AC,1)
     # showoffRealAdv(GLOBAL_AC, GLOBAL_AC_ADV)
 
 #####################
@@ -458,16 +458,18 @@ if __name__ == "__main__":
     #     for episodes in range(10):
     #         state = env.reset()
     #         reward_all = 0
-    #         for i in range(1000):
+    #         for i in range(200):
     #             action = AC.choose_action(state)
     #             action_adv = AC_adv.choose_action(state)
+    #             if X_amp ==0:
+    #                 action_adv = 0
     #             state_new, reward, done, _ = env.step(action-action_adv)
     #             reward_all = reward_all + reward
     #             if done:
     #                 break
     #             state = state_new
     #         reward_all_track.append(reward_all)
-    #     double_reward.append(np.mean(reward_all_track[-100:]))
+    #     double_reward.append(np.mean(reward_all_track[-10:]))
     #     X_amp += 0.05
     # print(double_reward)
     # # double_reward = double_reward[0::2]
@@ -483,16 +485,18 @@ if __name__ == "__main__":
     #     for episodes in range(10):
     #         state = env.reset()
     #         reward_all = 0
-    #         for i in range(1000):
+    #         for i in range(200):
     #             action = AC.choose_action(state)
     #             action_adv = AC_adv.choose_action(state)
+    #             if X_amp ==0:
+    #                 action_adv = 0
     #             state_new, reward, done, _ = env.step(action-action_adv)
     #             reward_all = reward_all + reward
     #             if done:
     #                 break
     #             state = state_new
     #         reward_all_track.append(reward_all)
-    #     single_reward.append(np.mean(reward_all_track[-100:]))
+    #     single_reward.append(np.mean(reward_all_track[-10:]))
     #     X_amp += 0.05
     # print(single_reward)
 
@@ -502,3 +506,10 @@ if __name__ == "__main__":
     # plt.ylabel('Total moving reward')
     # plt.legend(['single', 'double'])
     # plt.show()
+
+    '''
+now showoff double in env-adv
+[-493.7114121307103, -444.36093511046937, -395.93854636447713, -523.58939791470902, -432.21219413296848, -444.82654956750395, -446.83627631629463, -495.62804879503994, -451.93683865751393, -435.77430265647945, -556.70017758639881, -412.85739779401274, -427.74537439847211, -340.76258060010457, -510.90202441489316, -477.9490113422238, -424.09432663639728, -443.91698666346963]
+now showoff single in env-adv
+[-395.78340230469092, -763.44241863560239, -588.91281966920656, -649.21852304851689, -720.85237855001958, -691.84752774705203, -584.31383384411185, -683.08234712372587, -789.62914458315493, -555.88022681894518, -734.67610495074337, -488.61267132536449, -751.87078910112234, -789.12836753052727, -580.79344683334671, -578.30296474411796, -627.39835184811238, -585.77311510890127]
+    '''
