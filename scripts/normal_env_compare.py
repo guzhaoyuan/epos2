@@ -49,169 +49,6 @@ service = 'applyTorque2'
 
 time_step_reward = []
 
-
-'''
-now able to show both double and single pro as well as load double adv 
-as long as restore the double model first and do not clean using "tf.global_init"
-'''
-def showoff(env, global_agent, isDouble, inspect=0):
-    if isDouble:
-        print ("now showoff adv result")
-        AC = ACNet('showoff_double', global_agent)
-        AC.pull_global()
-    else:
-        print ("now showoff result")
-        AC = ACNet('showoff_single', global_agent)
-        AC.pull_global()
-
-    for episodes in range(1):
-       state = env.reset()
-       reward_all = 0
-       while(True):
-           env.render()
-           action = AC.choose_action(state)
-           # print(action)
-           if inspect != 0:
-               raw_input("Press Enter to continue...")
-           state_new, reward, done, _ = env.step(action)
-           reward_all = reward_all + reward
-           if done:
-               break
-           state = state_new
-       print ("episode:", episodes, ",reward: ", reward_all)
-
-    reward_all_track = []
-    for episodes in range(50):
-        state = env.reset()
-        reward_all = 0
-        for i in range(1000):
-            action = AC.choose_action(state)
-            state_new, reward, done, _ = env.step(action) 
-            reward_all = reward_all + reward
-            if done:
-                break
-            state = state_new
-        reward_all_track.append(reward_all)
-    # print(reward_all_track)
-    print( "final reward", np.mean(reward_all_track[-100:]))
-    return np.mean(reward_all_track[-100:])
-'''
-this function is able to show double and single pro in the adv env
-'''
-def showoff_in_Adv(env, global_agent, globalAC_adv, isDouble, inspect=0):
-    if isDouble:
-        print ("now showoff double in env-adv")
-        AC = ACNet('showoff_double', global_agent)
-        AC.pull_global()
-        AC_adv = ACNetAdv('showoff_double_adv', globalAC_adv)
-        AC_adv.pull_global()
-    else:
-        print ("now showoff single in env-adv")
-        AC = ACNet('showoff_single', global_agent)
-        AC.pull_global()
-        AC_adv = ACNetAdv('showoff_single_adv', globalAC_adv)
-        AC_adv.pull_global()
-
-    # for episodes in range(1):
-    #     state = env.reset()
-    #     reward_all = 0
-    #     for i in range(200):
-    #         env.render()
-    #         action = AC.choose_action(state)
-    #         action_adv = AC_adv.choose_action(state)
-    #         state_new, reward, done, _ = env.step(action-action_adv)
-    #         reward_all = reward_all + reward
-    #         if done:
-    #             break
-    #         state = state_new
-    #     print ("episode:", episodes, ",reward: ", reward_all)
-
-    reward_all_track = []
-    for episodes in range(50):
-        state = env.reset()
-        reward_all = 0
-        for i in range(1000):
-            action = AC.choose_action(state)
-            action_adv = AC_adv.choose_action(state)
-            state_new, reward, done, _ = env.step(action-action_adv)
-            reward_all = reward_all + reward
-            if done:
-                break
-            state = state_new
-        reward_all_track.append(reward_all)
-    # print(reward_all_track)
-    print( "final reward", np.mean(reward_all_track[-100:]))
-    return np.mean(reward_all_track[-100:])
-
-'''
-this can only showoff single and double pro in real model for now
-'''
-def showoffReal(global_agent, nonStop = 0):
-    print ("now showoff result")
-    AC = ACNet('showoff_agent', global_agent)
-    AC.pull_global()
-    for i in range(5):
-        buffer_s, buffer_a, buffer_r = [], [], []
-        step = 0
-        ep_r = 0
-        s = request_init()
-        while(True):
-            step += 1
-            a = AC.choose_action(s)
-            if nonStop and step < 1000:
-
-                    res = request_torque(1, a)
-            else:
-                    res = request_torque(step, a)
-            print "state:", s, ",action:", a[0], ",\treward:", res.reward
-
-            s_ = np.array(res.state_new)
-            s = s_
-            ep_r += res.reward
-            time_step_reward.append(res.reward)
-
-            if res.done:
-                res = request_torque(step, 0)
-
-                pickle_file = 'disturbance/double-'+datetime.now().strftime('%m-%d-%H:%M')+'.pkl'
-                with open(pickle_file, 'wb') as f:
-                    pickle.dump(time_step_reward, f)
-
-                print("done episode, reward:", ep_r)
-                break
-
-def showoffRealAdv(global_agent, global_agent_adv, nonStop = 0):
-    print ("now showoff result")
-    AC = ACNet('showoff_agent', global_agent)
-    AC.pull_global()
-    AC_adv = ACNetAdv('showoff_agent', global_agent)
-    AC_adv.pull_global()
-    for i in range(5):
-        buffer_s, buffer_a, buffer_r = [], [], []
-        step = 0
-        ep_r = 0
-        s = request_init_adv()
-        while(True):
-            step += 1
-
-            a = AC.choose_action(s)
-            a_adv = AC_adv.choose_action(s)
-
-            if nonStop:
-                res = request_torque_adv(1, a, a_adv)
-            else:
-                res = request_torque_adv(step, a, a_adv)
-            print "state:", s, ",action:", a[0], ",\treward:", res.reward
-
-            s_ = np.array(res.state_new)
-            s = s_
-            ep_r += res.reward
-
-            if res.done:
-                res = request_torque_adv(step, 0, 0)
-                print("done episode, reward:", ep_r)
-                break
-
 def request_torque(position, current, init=0):
     # print("wait for Service")
     #asset current in range(-2,2)
@@ -404,6 +241,169 @@ class ACNetAdv(object):
         s = s[np.newaxis, :]
         return SESS.run([self.mu, self.sigma], {self.s: s})	
 
+'''
+now able to show both double and single pro as well as load double adv 
+as long as restore the double model first and do not clean using "tf.global_init"
+'''
+def showoff(env, global_agent, isDouble, inspect=0):
+    if isDouble:
+        print ("now showoff adv result")
+        AC = ACNet('showoff_double', global_agent)
+        AC.pull_global()
+    else:
+        print ("now showoff result")
+        AC = ACNet('showoff_single', global_agent)
+        AC.pull_global()
+
+    for episodes in range(1):
+       state = env.reset()
+       reward_all = 0
+       while(True):
+           env.render()
+           action = AC.choose_action(state)
+           # print(action)
+           if inspect != 0:
+               raw_input("Press Enter to continue...")
+           state_new, reward, done, _ = env.step(action)
+           reward_all = reward_all + reward
+           if done:
+               break
+           state = state_new
+       print ("episode:", episodes, ",reward: ", reward_all)
+
+    reward_all_track = []
+    for episodes in range(50):
+        state = env.reset()
+        reward_all = 0
+        for i in range(1000):
+            action = AC.choose_action(state)
+            state_new, reward, done, _ = env.step(action) 
+            reward_all = reward_all + reward
+            if done:
+                break
+            state = state_new
+        reward_all_track.append(reward_all)
+    # print(reward_all_track)
+    print( "final reward", np.mean(reward_all_track[-100:]))
+    return np.mean(reward_all_track[-100:])
+'''
+this function is able to show double and single pro in the adv env
+'''
+def showoff_in_Adv(env, global_agent, globalAC_adv, isDouble, inspect=0):
+    if isDouble:
+        print ("now showoff double in env-adv")
+        AC = ACNet('showoff_double', global_agent)
+        AC.pull_global()
+        AC_adv = ACNetAdv('showoff_double_adv', globalAC_adv)
+        AC_adv.pull_global()
+    else:
+        print ("now showoff single in env-adv")
+        AC = ACNet('showoff_single', global_agent)
+        AC.pull_global()
+        AC_adv = ACNetAdv('showoff_single_adv', globalAC_adv)
+        AC_adv.pull_global()
+
+    # for episodes in range(1):
+    #     state = env.reset()
+    #     reward_all = 0
+    #     for i in range(200):
+    #         env.render()
+    #         action = AC.choose_action(state)
+    #         action_adv = AC_adv.choose_action(state)
+    #         state_new, reward, done, _ = env.step(action-action_adv)
+    #         reward_all = reward_all + reward
+    #         if done:
+    #             break
+    #         state = state_new
+    #     print ("episode:", episodes, ",reward: ", reward_all)
+
+    reward_all_track = []
+    for episodes in range(50):
+        state = env.reset()
+        reward_all = 0
+        for i in range(1000):
+            action = AC.choose_action(state)
+            action_adv = AC_adv.choose_action(state)
+            state_new, reward, done, _ = env.step(action-action_adv)
+            reward_all = reward_all + reward
+            if done:
+                break
+            state = state_new
+        reward_all_track.append(reward_all)
+    # print(reward_all_track)
+    print( "final reward", np.mean(reward_all_track[-100:]))
+    return np.mean(reward_all_track[-100:])
+
+def showoffRealAdv(global_agent, global_agent_adv, nonStop = 0):
+    print ("now showoff result")
+    AC = ACNet('showoff_agent', global_agent)
+    AC.pull_global()
+    AC_adv = ACNetAdv('showoff_agent', global_agent)
+    AC_adv.pull_global()
+    for i in range(5):
+        buffer_s, buffer_a, buffer_r = [], [], []
+        step = 0
+        ep_r = 0
+        s = request_init_adv()
+        while(True):
+            step += 1
+
+            a = AC.choose_action(s)
+            a_adv = AC_adv.choose_action(s)
+
+            if nonStop:
+                res = request_torque_adv(1, a, a_adv)
+            else:
+                res = request_torque_adv(step, a, a_adv)
+            print "state:", s, ",action:", a[0], ",\treward:", res.reward
+
+            s_ = np.array(res.state_new)
+            s = s_
+            ep_r += res.reward
+
+            if res.done:
+                res = request_torque_adv(step, 0, 0)
+                print("done episode, reward:", ep_r)
+                break
+
+
+'''
+this can only showoff single and double pro in real model for now
+'''
+def showoffReal(global_agent, nonStop = 0):
+    print ("now showoff result")
+    AC = ACNet('showoff_agent', global_agent)
+    AC.pull_global()
+    for i in range(5):
+        buffer_s, buffer_a, buffer_r = [], [], []
+        step = 0
+        ep_r = 0
+        s = request_init()
+        while(True):
+            step += 1
+            a = AC.choose_action(s)
+            if nonStop and step < 1000:
+                
+                    res = request_torque(1, a)
+            else:
+
+                    res = request_torque(step, a)
+            print "state:", s, ",action:", a[0], ",\treward:", res.reward
+
+            s_ = np.array(res.state_new)
+            s = s_
+            ep_r += res.reward
+            time_step_reward.append(res.reward)
+
+            if res.done:
+                res = request_torque(step, 0)
+
+                pickle_file = 'swingup/single-'+ datetime.now().strftime('%m-%d-%H-%M:%S')+'.pkl'
+                with open(pickle_file, 'wb') as f:
+                    pickle.dump(time_step_reward, f)
+
+                print("done episode, reward:", ep_r)
+                break
 
 
 if __name__ == "__main__":
@@ -439,14 +439,14 @@ if __name__ == "__main__":
 # this part shows the trained agent in real model
     # GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
     SESS.run(tf.global_variables_initializer())
-    saver.restore(SESS, 'model_adv_real/double-3611-249')
-    # saver.restore(SESS, 'model/ckpt-63')
-    # saver.restore(SESS, 'model_adv_real/double-4367-113')
+    # saver.restore(SESS, 'model_adv_real/double-3611')
+    saver.restore(SESS, 'model/ckpt-63')
+    # saver.restore(SESS, 'model_adv_real/double-4367')
 
     # SESS.run(tf.global_variables_initializer())
     # saver.restore(SESS, 'model/ckpt-73')
     
-    showoffReal(GLOBAL_AC,1)
+    showoffReal(GLOBAL_AC)
     # showoffRealAdv(GLOBAL_AC, GLOBAL_AC_ADV)
 
 #####################
