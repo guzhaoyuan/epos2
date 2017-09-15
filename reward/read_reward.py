@@ -1,9 +1,8 @@
 import matplotlib.pyplot as plt
-from epos2.srv import *
-import rospy
 import pickle
 import numpy as np
-pickle_file = 'reward/single-09-09-04:14.pkl'
+# pickle_file = 'reward/single-09-09-04:14.pkl'
+pickle_file = 'reward/single-09-14-21:48.pkl'
 with open(pickle_file,'rb') as f:
 	GLOBAL_RUNNING_R = pickle.load(f)
 	GLOBAL_MEAN_R = pickle.load(f)

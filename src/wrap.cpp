@@ -1,3 +1,12 @@
+/**
+    wrap.cpp
+    Purpose: 
+    	wrapped some of the used api for epos2
+    	this is not a whole library of epos2 api, only for the convenience to invoke some functions
+		this file is used by all the controller cpp and the compile rule was defined in CMakeLists
+    @author Zhaoyuan Gu
+    @version 0.2 09/10/17 
+**/
 #include "wrap.h"
 
 void* g_pKeyHandle;

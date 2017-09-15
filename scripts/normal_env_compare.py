@@ -43,7 +43,7 @@ N_Adv_A = 1 #dimension of action space of adversary agent
 ADV_BOUND = [i*X_amp for i in A_BOUND]# the external force for the adv is a little smaller
 print(A_BOUND, ADV_BOUND)
 
-service = 'applyTorque'
+service = 'applyTorque2'
 
 '''
 now able to show both double and single pro as well as load double adv 
@@ -152,12 +152,11 @@ def showoffReal(global_agent, nonStop = 0):
         s = request_init()
         while(True):
             step += 1
-
             a = AC.choose_action(s)
             if nonStop:
-                res = request_torque(1, a)
+                    res = request_torque(1, a)
             else:
-                res = request_torque(step, a)
+                    res = request_torque(step, a)
             print "state:", s, ",action:", a[0], ",\treward:", res.reward
 
             s_ = np.array(res.state_new)
@@ -425,13 +424,15 @@ if __name__ == "__main__":
 #####################
 # this part shows the trained agent in real model
     # GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
-    # SESS.run(tf.global_variables_initializer())
+    SESS.run(tf.global_variables_initializer())
     # saver.restore(SESS, 'model_adv_real/double-3611-249')
+    saver.restore(SESS, 'model/ckpt-63')
+    # saver.restore(SESS, 'model_adv_real/double-4367-113')
 
     # SESS.run(tf.global_variables_initializer())
     # saver.restore(SESS, 'model/ckpt-73')
     
-    # showoffReal(GLOBAL_AC,1)
+    showoffReal(GLOBAL_AC)
     # showoffRealAdv(GLOBAL_AC, GLOBAL_AC_ADV)
 
 #####################

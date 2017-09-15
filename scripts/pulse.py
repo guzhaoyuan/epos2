@@ -5,8 +5,9 @@ this script generate a pulse applied onto the servo to disturb the pendulum
 '''
 from epos2.srv import *
 import rospy
+import sys
 
-service = '/applyTorque2'
+service = '/applyTorque'
 
 def request_torque(position, current, init=0):
     # print("wait for Service")
@@ -20,8 +21,11 @@ def request_torque(position, current, init=0):
         print("Service call failed: %s"%e)
 
 step = 0
-while(step < 40):
-    step += 1
-    res = request_torque(step, 2)
-res = request_torque(step+1, 0)
-print("pulse done")
+# while(True):
+if len(sys.argv[1:]) == 1:
+    arg = min(int(sys.argv[1]), 25)
+    while(step < arg):
+        step += 1
+        res = request_torque(step, 2)
+    res = request_torque(step+1, 0)
+    print("pulse done")

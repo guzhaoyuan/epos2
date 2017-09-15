@@ -16,7 +16,7 @@ OUTPUT_GRAPH = True
 LOG_DIR = './log'
 N_WORKERS = 2#multiprocessing.cpu_count()
 MAX_EP_STEP = 200
-MAX_GLOBAL_EP = 1500
+MAX_GLOBAL_EP = 2000
 MAX_R = -1600
 GLOBAL_NET_SCOPE = 'Global_Net'
 UPDATE_GLOBAL_ITER = 10
@@ -154,6 +154,9 @@ class Worker(object):
                 total_step += 1
                 if done:
                     GLOBAL_RUNNING_R.append(ep_r)
+                    if ep_r > -300:
+                        LR_A = 0.0005
+                        LR_C = 0.00005
                     GLOBAL_MEAN_R.append(np.mean(GLOBAL_RUNNING_R[-50:]))
                     print(
                         self.name,

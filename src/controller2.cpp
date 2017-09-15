@@ -18,8 +18,8 @@
 #define V_HIGH 10.0f
 #define CURRENT_MAX 2.0f
 #define CURRENT_MIN -2.0f // res.torque = (-1,1)
-#define TORQUE_AMP 1500 //torque applied = TORQUE_AMP * res.torque // 2000 is for max real
-#define MAX_STEP 300
+#define TORQUE_AMP 1600 //torque applied = TORQUE_AMP * res.torque // 2000 is for max real
+#define MAX_STEP 400
 /**
 	define clockwise is minus, conterclockwise is positive
 	define theta is the angle from upward axis to pumdulum, range (-PI , PI]

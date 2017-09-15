@@ -285,7 +285,7 @@ if __name__ == "__main__":
 
     saver.restore(SESS, 'model_adv_real/double-3611-249')
     # saver.restore(SESS, 'model/ckpt-63')
-    # saver.restore(SESS, 'model_adv_real/double-4367')
+    # saver.restore(SESS, 'model_adv_real/double-4367-113-42-214')
 
     # showoff(env, GLOBAL_AC)
     showoffReal(GLOBAL_AC)
