@@ -19,7 +19,7 @@
 #define CURRENT_MAX 2.0f
 #define CURRENT_MIN -2.0f // res.torque = (-2,2)
 #define TORQUE_AMP 1500 //torque applied = TORQUE_AMP * res.torque, so the max current here is 1500*2=3000mA
-#define MAX_STEP 400
+#define MAX_STEP 200
 /**
 	define clockwise is minus, conterclockwise is positive
 	define theta is the angle from upward axis to pumdulum, range (-PI , PI]

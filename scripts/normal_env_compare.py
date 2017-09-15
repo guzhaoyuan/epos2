@@ -17,6 +17,8 @@ import shutil
 import matplotlib.pyplot as plt
 from epos2.srv import *
 import rospy
+import pickle
+from datetime import datetime
 
 GAME = 'Pendulum-v0'
 OUTPUT_GRAPH = True
@@ -44,6 +46,9 @@ ADV_BOUND = [i*X_amp for i in A_BOUND]# the external force for the adv is a litt
 print(A_BOUND, ADV_BOUND)
 
 service = 'applyTorque2'
+
+time_step_reward = []
+
 
 '''
 now able to show both double and single pro as well as load double adv 
@@ -153,7 +158,8 @@ def showoffReal(global_agent, nonStop = 0):
         while(True):
             step += 1
             a = AC.choose_action(s)
-            if nonStop:
+            if nonStop and step < 1000:
+
                     res = request_torque(1, a)
             else:
                     res = request_torque(step, a)
@@ -162,9 +168,15 @@ def showoffReal(global_agent, nonStop = 0):
             s_ = np.array(res.state_new)
             s = s_
             ep_r += res.reward
+            time_step_reward.append(res.reward)
 
             if res.done:
                 res = request_torque(step, 0)
+
+                pickle_file = 'disturbance/double-'+datetime.now().strftime('%m-%d-%H:%M')+'.pkl'
+                with open(pickle_file, 'wb') as f:
+                    pickle.dump(time_step_reward, f)
+
                 print("done episode, reward:", ep_r)
                 break
 
@@ -407,6 +419,7 @@ if __name__ == "__main__":
     saver = tf.train.Saver()
 
 #####################
+# part 1
 # have to reload double model first, this will init the double-adv agent
     # GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
     # SESS.run(tf.global_variables_initializer())
@@ -422,21 +435,22 @@ if __name__ == "__main__":
     # showoffReal(GLOBAL_AC, 1)
 
 #####################
+# part 2
 # this part shows the trained agent in real model
     # GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
     SESS.run(tf.global_variables_initializer())
-    # saver.restore(SESS, 'model_adv_real/double-3611-249')
-    saver.restore(SESS, 'model/ckpt-63')
+    saver.restore(SESS, 'model_adv_real/double-3611-249')
+    # saver.restore(SESS, 'model/ckpt-63')
     # saver.restore(SESS, 'model_adv_real/double-4367-113')
 
     # SESS.run(tf.global_variables_initializer())
     # saver.restore(SESS, 'model/ckpt-73')
     
-    showoffReal(GLOBAL_AC)
+    showoffReal(GLOBAL_AC,1)
     # showoffRealAdv(GLOBAL_AC, GLOBAL_AC_ADV)
 
 #####################
-
+# part 3
 # this part of code was used to generate compare img for single and double in adv env
 
     # GLOBAL_AC_ADV = ACNetAdv(GLOBAL_NET_SCOPE)
